@@ -1,0 +1,2643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Creación de Plugins de Audio con IA by Rubén Sbarsky</title>
+  <style>
+    :root {
+      --bg-main: #0a0e1a;
+      --bg-card: #0f172a;
+      --bg-elevated: #1e293b;
+      --blue-highlight: #1e3a5f;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --accent: #38bdf8;
+      --accent-alt: #00d4ff;
+      --accent-glow: rgba(56, 189, 248, 0.22);
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --purple: #a855f7;
+      --border-color: #1e3a5f;
+      --font-scale: 1;
+      --nav-height: 60px;
+    }
+
+    body.light-theme {
+      --bg-main: #f1f5f9;
+      --bg-card: #ffffff;
+      --bg-elevated: #e2e8f0;
+      --blue-highlight: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --accent: #0284c7;
+      --accent-alt: #0369a1;
+      --accent-glow: rgba(2, 132, 199, 0.15);
+      --border-color: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      font-size: calc(16px * var(--font-scale));
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+      padding-top: calc(var(--nav-height) + 48px);
+      padding-bottom: 90px;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* BARRA DE PROGRESO SUPERIOR */
+    #reading-progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      z-index: 100;
+    }
+
+    #reading-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--purple), var(--success));
+      transition: width 0.15s ease;
+    }
+
+    /* BARRA DE NAVEGACIÓN PRINCIPAL FIJA */
+    header.top-nav-wrapper {
+      position: fixed;
+      top: 4px;
+      left: 0;
+      right: 0;
+      z-index: 40;
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    body.light-theme header.top-nav-wrapper {
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    nav#main-nav {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      height: var(--nav-height);
+      white-space: nowrap;
+    }
+
+    nav#main-nav::-webkit-scrollbar {
+      height: 4px;
+    }
+
+    nav#main-nav::-webkit-scrollbar-thumb {
+      background: var(--blue-highlight);
+      border-radius: 4px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 42px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .chip:hover,
+    .chip:focus-visible {
+      border-color: var(--accent);
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .chip.active {
+      background: var(--accent);
+      color: #050811;
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    #mb {
+      background: linear-gradient(135deg, #1e3a5f, #0f172a);
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      font-weight: 700;
+    }
+
+    body.light-theme #mb {
+      background: #e0f2fe;
+      color: #0369a1;
+      border-color: #0284c7;
+    }
+
+    /* BARRA DE UTILIDADES SECUNDARIA (BUSCADOR + HERRAMIENTAS) */
+    .utility-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 10px;
+      background: var(--bg-main);
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 155px;
+      position: relative;
+    }
+
+    .search-box input {
+      width: 100%;
+      min-height: 36px;
+      padding: 6px 30px 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+
+    .search-box input:focus {
+      outline: 2px solid var(--accent);
+    }
+
+    .clear-search-btn {
+      position: absolute;
+      right: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 4px;
+      display: none;
+    }
+
+    .tool-buttons {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tool-btn {
+      min-height: 36px;
+      min-width: 36px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* PANEL LATERAL DE ÍNDICE (#dr) SEGÚN ESPECIFICACIÓN EXACTA */
+    #dr {
+      position: fixed;
+      top: 58px;
+      left: 0;
+      bottom: 0;
+      width: min(330px, 88vw);
+      background: #0f172a;
+      border-right: 1px solid #1e3a5f;
+      transform: translateX(-105%);
+      transition: .25s;
+      z-index: 50;
+      overflow: auto;
+      padding: 10px;
+      box-shadow: 6px 0 24px rgba(0, 0, 0, 0.6);
+    }
+
+    #dr.o {
+      transform: none;
+    }
+
+    #dr a {
+      display: flex;
+      align-items: center;
+      padding: 12px;
+      border-radius: 8px;
+      color: #e2e8f0;
+      cursor: pointer;
+      min-height: 44px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.92rem;
+      margin-bottom: 4px;
+      border: 1px solid transparent;
+    }
+
+    #dr a:hover,
+    #dr a:focus-visible {
+      background: #ffffff0d;
+      border-color: #1e3a5f;
+      outline: none;
+    }
+
+    #dr a.on {
+      background: #00d4ff22;
+      color: #00d4ff;
+      border-color: #00d4ff55;
+    }
+
+    /* CONTENEDOR PRINCIPAL OPTIMIZADO PARA SAMSUNG GALAXY A02s (360px+) */
+    main.container {
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 16px 12px;
+    }
+
+    .tab-section {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .tab-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* TIPOGRAFÍA Y JERARQUÍA */
+    h1 {
+      font-size: clamp(1.45rem, 4.5vw, 2.25rem);
+      line-height: 1.25;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    h2 {
+      font-size: clamp(1.25rem, 3.8vw, 1.75rem);
+      color: var(--accent);
+      margin: 20px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 800;
+    }
+
+    h3 {
+      font-size: clamp(1.08rem, 3vw, 1.35rem);
+      color: var(--text-primary);
+      margin: 18px 0 8px;
+      font-weight: 700;
+    }
+
+    h4 {
+      font-size: 1rem;
+      color: var(--accent);
+      margin: 12px 0 6px;
+      font-weight: 700;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: var(--text-primary);
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    ul, ol {
+      margin: 0 0 14px 20px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    /* TARJETAS Y PANELES */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.14);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .badge.level-1 { background: rgba(34, 197, 94, 0.15); color: #4ade80; border-color: rgba(34, 197, 94, 0.4); }
+    .badge.level-2 { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.4); }
+    .badge.level-3 { background: rgba(168, 85, 247, 0.18); color: #c084fc; border-color: rgba(168, 85, 247, 0.45); }
+
+    /* ESTRUCTURA PEDAGÓGICA */
+    .pedagogy-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .pedagogy-box {
+      background: rgba(30, 58, 95, 0.25);
+      border-left: 4px solid var(--accent);
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    .pedagogy-box.correct {
+      border-left-color: var(--success);
+      background: rgba(34, 197, 94, 0.08);
+    }
+
+    .pedagogy-box.incorrect {
+      border-left-color: var(--danger);
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    /* CONTENEDOR SVG HERO Y CRÉDITOS (FORMATO 4:5 VERTICAL ADAPTABLE) */
+    .svg-stage-wrapper {
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto 18px;
+      background: radial-gradient(circle at center, #111c35 0%, #070b14 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 10px;
+      box-shadow: 0 8px 30px rgba(0, 212, 255, 0.14);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .svg-mount-target {
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .svg-mount-target svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .svg-controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    /* BLOQUES DE PROMPTS, CÓDIGO Y URLs COPIABLES */
+    .copy-block {
+      background: #060911;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+
+    body.light-theme .copy-block {
+      background: #f8fafc;
+    }
+
+    .copy-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      background: rgba(30, 58, 95, 0.4);
+      border-bottom: 1px solid var(--border-color);
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .copy-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .copy-btn, .ext-link-btn, .secondary-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover, .ext-link-btn:hover, .secondary-action-btn:hover {
+      background: var(--accent);
+      color: #060911;
+    }
+
+    .copy-content {
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88rem;
+      color: #f1f5f9;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.5;
+    }
+
+    body.light-theme .copy-content {
+      color: #0f172a;
+    }
+
+    /* COMPONENTE DE URL CON BOTÓN OBLIGATORIO "Abrir enlace en nueva ventana" */
+    .url-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin: 10px 0;
+    }
+
+    body.light-theme .url-box {
+      background: #f1f5f9;
+    }
+
+    .url-text {
+      font-family: monospace;
+      font-size: 0.85rem;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .url-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* TABLAS ADAPTABLES MÓVIL */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      margin: 14px 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 290px;
+      font-size: 0.88rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: rgba(30, 58, 95, 0.5);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    tr:nth-child(even) {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* ACORDEONES / DESPLEGABLES */
+    details.qa-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    details.qa-item summary {
+      padding: 12px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      list-style: none;
+      min-height: 46px;
+    }
+
+    details.qa-item summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.qa-item summary::after {
+      content: "▼";
+      font-size: 0.75rem;
+      color: var(--accent);
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    details.qa-item[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    details.qa-item .qa-body {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border-color);
+      background: rgba(10, 14, 26, 0.45);
+    }
+
+    body.light-theme details.qa-item .qa-body {
+      background: #f8fafc;
+    }
+
+    /* CHECKLIST INTERACTIVO */
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 8px;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .checklist-item input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .checklist-item.completed span {
+      text-decoration: line-through;
+      color: var(--text-secondary);
+    }
+
+    /* NAVEGACIÓN FIJA AL FINAL DE CADA PESTAÑA (ANTERIOR / SIGUIENTE) */
+    .tab-footer-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 28px;
+      padding: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      position: sticky;
+      bottom: 10px;
+      z-index: 20;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-step-btn {
+      flex: 1;
+      min-height: 46px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--accent);
+      background: var(--blue-highlight);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 0.86rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      transition: transform 0.15s ease, background 0.2s ease;
+    }
+
+    .nav-step-btn:hover {
+      background: var(--accent);
+      color: #050811;
+    }
+
+    /* BOTONES FLOTANTES MOVIBLES (ARRASTRABLES TÁCTIL Y RATÓN) */
+    .floating-draggable {
+      position: fixed;
+      z-index: 65;
+      min-height: 46px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #0284c7, #1e3a5f);
+      color: #ffffff;
+      border: 2px solid #38bdf8;
+      font-weight: 800;
+      font-size: 0.8rem;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.65);
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .floating-draggable:active {
+      cursor: grabbing;
+      transform: scale(1.04);
+    }
+
+    #float-home-btn {
+      bottom: 78px;
+      right: 12px;
+    }
+
+    #float-top-btn {
+      bottom: 22px;
+      right: 12px;
+    }
+
+    /* CRÉDITOS DESTACADOS */
+    .author-hero-name {
+      font-size: clamp(2rem, 7vw, 3.3rem);
+      font-weight: 900;
+      text-align: center;
+      background: linear-gradient(90deg, #38bdf8, #a855f7, #22c55e);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin: 12px 0 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .author-role-subtitle {
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    /* NOTIFICACIÓN TOAST */
+    #toast-message {
+      position: fixed;
+      bottom: 135px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f172a;
+      color: #38bdf8;
+      border: 1px solid #38bdf8;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 90;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #toast-message.visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ANIMACIONES SVG MULTICAPA */
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.45; transform: scale(0.98); }
+      50% { opacity: 0.95; transform: scale(1.04); }
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinReverse {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    @keyframes waveFlow {
+      0% { stroke-dashoffset: 240; }
+      100% { stroke-dashoffset: 0; }
+    }
+    @keyframes vuBounce1 {
+      0%, 100% { height: 28px; y: 312px; }
+      40% { height: 68px; y: 272px; }
+      75% { height: 48px; y: 292px; }
+    }
+    @keyframes vuBounce2 {
+      0%, 100% { height: 54px; y: 286px; }
+      35% { height: 82px; y: 258px; }
+      70% { height: 32px; y: 308px; }
+    }
+    @keyframes vuBounce3 {
+      0%, 100% { height: 64px; y: 276px; }
+      50% { height: 90px; y: 250px; }
+      85% { height: 40px; y: 300px; }
+    }
+    @keyframes floatNode {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+
+    .svg-anim-spin-cw {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: spinSlow 14s linear infinite;
+    }
+    .svg-anim-spin-ccw {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: spinReverse 10s linear infinite;
+    }
+    .svg-anim-pulse {
+      transform-origin: center;
+      transform-box: fill-box;
+      animation: pulseGlow 3.2s ease-in-out infinite;
+    }
+    .svg-anim-wave {
+      stroke-dasharray: 18 10;
+      animation: waveFlow 4.5s linear infinite;
+    }
+    .svg-anim-float {
+      animation: floatNode 3.8s ease-in-out infinite;
+    }
+    .svg-vu-1 { animation: vuBounce1 1.4s ease-in-out infinite; }
+    .svg-vu-2 { animation: vuBounce2 1.1s ease-in-out infinite; }
+    .svg-vu-3 { animation: vuBounce3 1.6s ease-in-out infinite; }
+
+    .svg-paused * {
+      animation-play-state: paused !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .svg-anim-spin-cw, .svg-anim-spin-ccw, .svg-anim-pulse,
+      .svg-anim-wave, .svg-anim-float, .svg-vu-1, .svg-vu-2, .svg-vu-3 {
+        animation: none !important;
+      }
+    }
+
+    /* AJUSTES ESPECÍFICOS PARA PANTALLAS DE 360px (SAMSUNG GALAXY A02s) */
+    @media (max-width: 380px) {
+      body {
+        padding-top: calc(var(--nav-height) + 52px);
+      }
+      main.container {
+        padding: 12px 8px;
+      }
+      .card {
+        padding: 12px;
+      }
+      .chip {
+        padding: 6px 11px;
+        font-size: 0.8rem;
+      }
+      .nav-step-btn {
+        font-size: 0.78rem;
+        padding: 8px 6px;
+      }
+    }
+
+    /* HOJA DE ESTILOS DE IMPRESIÓN A4 VERTICAL OBLIGATORIA */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 14mm 12mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        font-size: 11pt !important;
+      }
+      header.top-nav-wrapper,
+      #reading-progress-container,
+      #dr,
+      .floating-draggable,
+      .tab-footer-nav,
+      .svg-controls-bar,
+      .copy-btn,
+      #toast-message {
+        display: none !important;
+      }
+      main.container {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .tab-section {
+        display: block !important;
+        margin-bottom: 18pt !important;
+        page-break-inside: auto;
+      }
+      .card, details.qa-item, .copy-block, .pedagogy-box, .url-box {
+        background: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #444444 !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+      h1, h2, h3, h4, p, li, td, th, summary, .copy-content, .author-hero-name {
+        color: #000000 !important;
+        background: none !important;
+        -webkit-text-fill-color: #000000 !important;
+      }
+      .svg-stage-wrapper {
+        max-width: 280px !important;
+        background: #f8fafc !important;
+        border: 1px solid #000000 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA DE PROGRESO DE LECTURA -->
+  <div id="reading-progress-container" aria-hidden="true">
+    <div id="reading-progress-bar"></div>
+  </div>
+
+  <!-- CABECERA FIJA CON NAVEGACIÓN E ÍNDICE SÁNDWICH -->
+  <header class="top-nav-wrapper">
+    <nav id="main-nav" aria-label="Navegación principal del tutorial">
+      <button class="chip" id="mb" aria-label="Abrir índice" aria-expanded="false">☰ Índice</button>
+      <button class="chip active" data-tab-target="0">INICIO</button>
+      <button class="chip" data-tab-target="1">CONCEPTOS</button>
+      <button class="chip" data-tab-target="2">PROCEDIMIENTO</button>
+      <button class="chip" data-tab-target="3">PRÁCTICA</button>
+      <button class="chip" data-tab-target="4">PROMPTS</button>
+      <button class="chip" data-tab-target="5">33 Preguntas (Q&amp;A)</button>
+      <button class="chip" data-tab-target="6">ERRORES</button>
+      <button class="chip" data-tab-target="7">RESUMEN</button>
+      <button class="chip" data-tab-target="8">FUENTES</button>
+      <button class="chip" data-tab-target="9">CRÉDITOS</button>
+    </nav>
+    <div id="dr" role="navigation" aria-label="Índice de secciones"></div>
+
+    <!-- BARRA DE UTILIDADES -->
+    <div class="utility-bar">
+      <div class="search-box">
+        <input type="search" id="global-search-input" placeholder="Buscar en el tutorial (ej. DSP, Hawa, Plan B)..." aria-label="Buscar contenido en el tutorial" />
+        <button class="clear-search-btn" id="clear-search-btn" title="Limpiar búsqueda" aria-label="Limpiar búsqueda">✕</button>
+      </div>
+      <div class="tool-buttons">
+        <button class="tool-btn" id="font-dec-btn" title="Reducir tamaño de letra" aria-label="Reducir tamaño de letra">A-</button>
+        <button class="tool-btn" id="font-inc-btn" title="Aumentar tamaño de letra" aria-label="Aumentar tamaño de letra">A+</button>
+        <button class="tool-btn" id="theme-toggle-btn" title="Cambiar entre tema oscuro y claro" aria-label="Cambiar tema visual">☀/☾</button>
+        <button class="tool-btn" id="print-pdf-btn" title="Imprimir o guardar como PDF" aria-label="Imprimir o guardar en PDF">🖨️ PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PLANTILLA SVG OCULTA ÚNICA (SE EXTRAE Y ELIMINA DEL DOM AL INICIAR) -->
+  <div id="svg-master-template-holder" style="display:none;" aria-hidden="true">
+    <svg viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ilustración animada de síntesis entre Inteligencia Artificial, redes neuronales, procesamiento digital de señales DSP y consola de masterización inspirada en Drawmer MC3.1">
+      <defs>
+        <linearGradient id="bgGrad__UID__" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#070b16" />
+          <stop offset="50%" stop-color="#0f172a" />
+          <stop offset="100%" stop-color="#132542" />
+        </linearGradient>
+        <linearGradient id="chassisGrad__UID__" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#090d16" />
+        </linearGradient>
+        <linearGradient id="cyanEnergy__UID__" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00d4ff" />
+          <stop offset="50%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#a855f7" />
+        </linearGradient>
+        <linearGradient id="vuGrad__UID__" x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" stop-color="#22c55e" />
+          <stop offset="70%" stop-color="#f59e0b" />
+          <stop offset="100%" stop-color="#ef4444" />
+        </linearGradient>
+        <filter id="neonGlow__UID__" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+
+      <!-- Fondo Tecnológico 4:5 -->
+      <rect width="400" height="500" rx="16" fill="url(#bgGrad__UID__)" />
+
+      <!-- Cuadrícula Acústica de Precisión -->
+      <g stroke="#1e3a5f" stroke-width="0.7" opacity="0.45">
+        <line x1="0" y1="70" x2="400" y2="70" />
+        <line x1="0" y1="140" x2="400" y2="140" />
+        <line x1="0" y1="210" x2="400" y2="210" />
+        <line x1="0" y1="280" x2="400" y2="280" />
+        <line x1="0" y1="350" x2="400" y2="350" />
+        <line x1="0" y1="420" x2="400" y2="420" />
+        <line x1="70" y1="0" x2="70" y2="500" />
+        <line x1="140" y1="0" x2="140" y2="500" />
+        <line x1="200" y1="0" x2="200" y2="500" />
+        <line x1="260" y1="0" x2="260" y2="500" />
+        <line x1="330" y1="0" x2="330" y2="500" />
+      </g>
+
+      <!-- CAPA 1 SUPERIOR: NÚCLEO IA (GPT-6 ASTRA / CODEX NEURAL ENGINE) -->
+      <g class="svg-anim-float">
+        <circle cx="200" cy="88" r="46" fill="#0b1528" stroke="#38bdf8" stroke-width="2" filter="url(#neonGlow__UID__)" />
+        <circle cx="200" cy="88" r="36" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="8 6" class="svg-anim-spin-cw" />
+        <circle cx="200" cy="88" r="24" fill="#00d4ff22" stroke="#00d4ff" stroke-width="1.5" class="svg-anim-pulse" />
+        <!-- Nodos de Red Neuronal -->
+        <line x1="120" y1="55" x2="165" y2="75" stroke="#38bdf8" stroke-width="1.5" class="svg-anim-wave" />
+        <line x1="280" y1="55" x2="235" y2="75" stroke="#38bdf8" stroke-width="1.5" class="svg-anim-wave" />
+        <line x1="105" y1="110" x2="160" y2="98" stroke="#a855f7" stroke-width="1.5" class="svg-anim-wave" />
+        <line x1="295" y1="110" x2="240" y2="98" stroke="#a855f7" stroke-width="1.5" class="svg-anim-wave" />
+        <circle cx="120" cy="55" r="5" fill="#38bdf8" />
+        <circle cx="280" cy="55" r="5" fill="#38bdf8" />
+        <circle cx="105" cy="110" r="5" fill="#a855f7" />
+        <circle cx="295" cy="110" r="5" fill="#a855f7" />
+        <text x="200" y="92" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="11" font-weight="bold">AI DSP</text>
+        <text x="200" y="26" text-anchor="middle" fill="#38bdf8" font-family="sans-serif" font-size="10" font-weight="bold" letter-spacing="1.5">OPENAI CODEX • C++ / JUCE</text>
+      </g>
+
+      <!-- Flujo de Datos Neural hacia el Rack de Audio -->
+      <path d="M 185 134 L 185 172" stroke="#00d4ff" stroke-width="2.5" class="svg-anim-wave" />
+      <path d="M 215 134 L 215 172" stroke="#a855f7" stroke-width="2.5" class="svg-anim-wave" />
+
+      <!-- CAPA 2 CENTRAL: CONSOLA HARDWARE "BUSY WORKS BEATS PLAN B" (INSPIRACIÓN DRAWMER MC3.1) -->
+      <rect x="26" y="170" width="348" height="225" rx="14" fill="url(#chassisGrad__UID__)" stroke="#38bdf8" stroke-width="2" />
+      <rect x="36" y="180" width="328" height="28" rx="6" fill="#090f1d" stroke="#1e3a5f" stroke-width="1" />
+      <text x="50" y="198" fill="#38bdf8" font-family="monospace" font-size="11" font-weight="bold">BWB PLAN B // MASTERING</text>
+      <circle cx="346" cy="194" r="5" fill="#22c55e" class="svg-anim-pulse" />
+      <text x="302" y="198" fill="#94a3b8" font-family="monospace" font-size="9">-0.3 dBFS</text>
+
+      <!-- Carrete de Saturación de Cinta (Tape Reel) + Perillas Rotatorias -->
+      <g transform="translate(88, 256)">
+        <circle cx="0" cy="0" r="32" fill="#0b1324" stroke="#38bdf8" stroke-width="2" />
+        <g class="svg-anim-spin-cw">
+          <circle cx="0" cy="0" r="22" fill="none" stroke="#00d4ff" stroke-width="2" stroke-dasharray="12 8" />
+          <line x1="-22" y1="0" x2="22" y2="0" stroke="#38bdf8" stroke-width="2" />
+          <line x1="0" y1="-22" x2="0" y2="22" stroke="#38bdf8" stroke-width="2" />
+        </g>
+        <circle cx="0" cy="0" r="7" fill="#f59e0b" />
+        <text x="0" y="46" text-anchor="middle" fill="#cbd5e1" font-family="sans-serif" font-size="9" font-weight="bold">SHAPE / TAPE</text>
+      </g>
+
+      <!-- Perilla Central: Parallel Room Mix / Space -->
+      <g transform="translate(196, 256)">
+        <circle cx="0" cy="0" r="32" fill="#0b1324" stroke="#a855f7" stroke-width="2" />
+        <g class="svg-anim-spin-ccw">
+          <circle cx="0" cy="0" r="22" fill="#1e1b4b" stroke="#c084fc" stroke-width="2" />
+          <line x1="0" y1="0" x2="0" y2="-20" stroke="#38bdf8" stroke-width="3" stroke-linecap="round" />
+        </g>
+        <text x="0" y="46" text-anchor="middle" fill="#cbd5e1" font-family="sans-serif" font-size="9" font-weight="bold">PARALLEL SPACE</text>
+      </g>
+
+      <!-- Medidores VU Dinámicos (Blind Test / Soft Clipper 3000) -->
+      <rect x="266" y="222" width="82" height="122" rx="6" fill="#050811" stroke="#1e3a5f" stroke-width="1.5" />
+      <rect x="280" y="280" width="12" height="60" rx="2" fill="url(#vuGrad__UID__)" class="svg-vu-1" />
+      <rect x="301" y="260" width="12" height="80" rx="2" fill="url(#vuGrad__UID__)" class="svg-vu-2" />
+      <rect x="322" y="270" width="12" height="70" rx="2" fill="url(#vuGrad__UID__)" class="svg-vu-3" />
+      <text x="307" y="236" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="8" font-weight="bold">SOFT CLIP 3000</text>
+
+      <!-- Conmutadores Binarios Correctos (DC Filter ON/OFF & Bypass ON/OFF) -->
+      <rect x="46" y="322" width="92" height="24" rx="5" fill="#0f172a" stroke="#22c55e" stroke-width="1.2" />
+      <circle cx="60" cy="334" r="5" fill="#22c55e" class="svg-anim-pulse" />
+      <text x="98" y="338" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9" font-weight="bold">DC FILTER: ON</text>
+
+      <rect x="152" y="322" width="96" height="24" rx="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
+      <circle cx="166" cy="334" r="5" fill="#38bdf8" />
+      <text x="205" y="338" text-anchor="middle" fill="#e2e8f0" font-family="monospace" font-size="9" font-weight="bold">BYPASS: OFF</text>
+
+      <!-- Onda Acústica Armónica en la Base (Blind Test 7 Vías) -->
+      <rect x="26" y="410" width="348" height="66" rx="12" fill="#060b16" stroke="#1e3a5f" stroke-width="1.5" />
+      <path d="M 38 443 Q 75 412, 112 443 T 186 443 T 260 443 T 334 443 L 362 443" fill="none" stroke="url(#cyanEnergy__UID__)" stroke-width="3" class="svg-anim-wave" filter="url(#neonGlow__UID__)" />
+      <path d="M 38 443 Q 75 472, 112 443 T 186 443 T 260 443 T 334 443 L 362 443" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.65" class="svg-anim-wave" />
+      <text x="200" y="468" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="9">BLIND TEST A/B/N • HOFA IQ-SERIES (HAWA) • RUBÉN SBARSKY</text>
+    </svg>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL DE LAS 10 PESTAÑAS -->
+  <main class="container" id="tutorial-main">
+
+    <!-- ==========================================
+         PESTAÑA 0: INICIO
+         ========================================== -->
+    <section class="tab-section active" id="sec-inicio" data-t="INICIO">
+      <div class="badge-row">
+        <span class="badge">Ingeniería de Audio + IA</span>
+        <span class="badge">VST3 / AU</span>
+        <span class="badge">Metodología Busy Works Beats</span>
+      </div>
+
+      <h1>Creación de Plugins de Audio con IA by Rubén Sbarsky</h1>
+
+      <!-- CONTENEDOR DEL SVG HERO COMPARTIDO -->
+      <div class="svg-stage-wrapper">
+        <div class="svg-mount-target" id="svg-hero-container" role="region" aria-label="Ilustración interactiva principal: Red neuronal OpenAI Codex conectada al procesador de masterización Busy Works Beats Plan B y medidores Soft Clipper 3000"></div>
+        <div class="svg-controls-bar">
+          <span>Escena Vectorial Activa: IA + Consola DSP</span>
+          <button type="button" class="tool-btn" id="toggle-svg-anim-hero" aria-label="Pausar o reanudar animación SVG">⏯ Animación</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <p>Bienvenido al tutorial interactivo completo basado en la metodología documental de <strong>Rubén Sbarsky (Busy Works Beats)</strong> para crear, desarrollar, refinar y auditar plugins de audio profesionales (VST/AU) utilizando <strong>ChatGPT</strong>, <strong>OpenAI Codex</strong> y protocolos de <strong>Pruebas a Ciegas (Blind Testing)</strong>.</p>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:14px;">
+          <button type="button" class="secondary-action-btn" id="ix" aria-label="Ver índice completo de secciones">☰ Ver índice</button>
+          <button type="button" class="secondary-action-btn" onclick="go(2)">Ir al Procedimiento Paso a Paso →</button>
+          <button type="button" class="secondary-action-btn" onclick="go(4)">Ver Repositorio de Prompts →</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>El Nuevo Paradigma del Desarrollo de Audio</h2>
+        <div class="pedagogy-grid">
+          <div class="pedagogy-box">
+            <h4>¿QUÉ ES?</h4>
+            <p>Un flujo de trabajo asistido por Modelos de Lenguaje de Gran Escala (LLM) y agentes locales que escriben código C++/JUCE y compilan plugins VST3/AU funcionales sin que tengas que programar manualmente.</p>
+          </div>
+          <div class="pedagogy-box">
+            <h4>¿PARA QUÉ SIRVE?</h4>
+            <p>Para superar la barrera histórica de años de programación en procesamiento digital de señales (DSP), permitiendo prototipar un plugin en 4 a 20 minutos y concentrar tu energía en el diseño sonoro.</p>
+          </div>
+          <div class="pedagogy-box">
+            <h4>¿POR QUÉ IMPORTA?</h4>
+            <p>Porque cuando cualquiera puede generar código rápido, <strong>la IA actúa como el programador y el ser humano como el artesano sonoro</strong>. El oído entrenado marca la diferencia entre un prototipo mediocre y un plugin líder.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Hoja de Ruta de Aprendizaje Progresivo</h3>
+        <ol>
+          <li><strong>Conceptos y Entorno:</strong> Diferencia entre MVP y Producto Final, ecosistema ChatGPT ($20/mes), OpenAI Codex local, Claude Code (Claude Opus 5.5) y niveles de razonamiento en GPT-6 Astra.</li>
+          <li><strong>Procedimiento "Plan B":</strong> Las 5 fases reales para construir el plugin <em>Busy Works Beats Plan B</em> inspirado conceptualmente en Master Plan 2 y visualmente en el hardware Drawmer MC3.1.</li>
+          <li><strong>Práctica y Blind Testing:</strong> Proyectos integradores ("Plan B" vs. "Soft Clipper 3000") y la prueba a ciegas de 7 vías con HOFA IQ-Series (Hawa).</li>
+          <li><strong>Prompts, 33 Q&amp;A y Solución de Errores:</strong> Todos los prompts listos para copiar, 33 preguntas clasificadas por nivel y diagnóstico de fallos reales de IA.</li>
+        </ol>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(1)">Siguiente: CONCEPTOS →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 1: CONCEPTOS
+         ========================================== -->
+    <section class="tab-section" id="sec-conceptos" data-t="CONCEPTOS">
+      <h2>Conceptos y Fundamentos Tecnológicos by Rubén Sbarsky</h2>
+
+      <div class="card">
+        <h3>1.1 La IA como Programador y el Humano como Artesano Sonoro</h3>
+        <p>Tradicionalmente, programar un plugin de Procesamiento Digital de Señales (<strong>DSP</strong>) requería meses o años de dominio en lenguaje C++ y frameworks especializados como JUCE. Hoy, un modelo de lenguaje avanzado genera código funcional en minutos.</p>
+        <p>Sin embargo, <strong>que un código compile y suene no significa que tenga calidad competitiva</strong>. El cuello de botella ya no es escribir sintaxis, sino la capacidad auditiva del productor para escuchar, detectar defectos acústicos y dirigir el refinamiento algorítmico.</p>
+      </div>
+
+      <div class="card">
+        <h3>1.2 Producto Mínimo Viable (MVP) vs. Producto Final Competitivo</h3>
+        <p>Cuando le das una primera instrucción a la IA, el resultado es un <strong>Producto Mínimo Viable (MVP)</strong> o prototipo rudimentario. Veamos sus diferencias críticas:</p>
+        <div class="pedagogy-grid">
+          <div class="pedagogy-box incorrect">
+            <h4>❌ Prototipo Bruto de IA (MVP - 4 min)</h4>
+            <ul>
+              <li>Modifica de forma indeseada el tono o la respuesta de frecuencia.</li>
+              <li>Presenta controles mal escalados (ej. interruptores de <em>bypass</em> como deslizadores de 0% a 100%).</li>
+              <li>Usa mezcla directa Dry/Wet que atenúa la señal limpia original en lugar de procesar en paralelo.</li>
+            </ul>
+          </div>
+          <div class="pedagogy-box correct">
+            <h4>✅ Producto Final Competitivo (10-20+ min con oído humano)</h4>
+            <ul>
+              <li>Curvas de saturación y respuesta de transitorios calibradas por el oído humano.</li>
+              <li>Procesamiento en paralelo real que preserva el cuerpo de la mezcla.</li>
+              <li>Validado objetivamente en pruebas a ciegas frente a plugins comerciales líderes.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>1.3 Ecosistema de Modelos de IA y Configuración del Entorno</h3>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Herramienta / Modelo</th>
+                <th>Función Principal en el Flujo</th>
+                <th>Características Clave Documentadas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>ChatGPT (OpenAI)</strong></td>
+                <td>Estructuración de ideas, diseño de prompts e iteración conceptual</td>
+                <td>Suscripción aproximada de $20/mes para acceso a modelos avanzados.</td>
+              </tr>
+              <tr>
+                <td><strong>OpenAI Codex</strong></td>
+                <td>Agente ejecutable de escritorio local</td>
+                <td>Interactúa con archivos de la computadora, compila código C++/JUCE e instala binarios VST3/AU sin pedir permisos constantes de red.</td>
+              </tr>
+              <tr>
+                <td><strong>Claude Code (Claude Opus 5.5)</strong></td>
+                <td>Alternativa local de alta precisión (Anthropic)</td>
+                <td>Rendimiento y precisión superior para tareas complejas de programación local operando en modo <em>High</em>.</td>
+              </tr>
+              <tr>
+                <td><strong>GPT-6 Astra (Modelo Premier)</strong></td>
+                <td>Director técnico / Ingeniero sénior dentro de Codex</td>
+                <td>Resuelve problemas complejos de arquitectura matemática y algoritmos DSP sin errores de sintaxis.</td>
+              </tr>
+              <tr>
+                <td><strong>HOFA IQ-Series (Hawa)</strong></td>
+                <td>Software de Pruebas a Ciegas (Blind Testing A/B/N)</td>
+                <td>Conmutación aleatoria, igualación de volumen e identidad oculta de plugins para evaluación sin sesgos.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>1.4 Modos de Razonamiento y Presupuesto Semanal de Tokens</h3>
+        <ul>
+          <li><strong>Light Mode / Fast Mode:</strong> Consume una cantidad reducida de tokens. Es el modo óptimo para prototipado rápido y pruebas de interfaz visual.</li>
+          <li><strong>Ultra Mode:</strong> Activa la capacidad máxima de ponderación algorítmica. La IA evalúa múltiples arquitecturas antes de escribir código, pero consume más tokens y solicita confirmaciones explícitas.</li>
+          <li><strong>Salvaguarda del Presupuesto Semanal:</strong> Los modelos premier tienen cuotas semanales de tokens. Siempre debes fijar un límite por prompt (por ejemplo, no superar el <strong>5% del presupuesto semanal</strong>) para no agotar tu cuenta en un solo prototipo.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>1.5 Glosario Técnico Esencial para Principiantes</h3>
+        <ul>
+          <li><strong>AU (Audio Unit):</strong> Formato estándar de plugins de audio para macOS.</li>
+          <li><strong>VST / VST3:</strong> Formato estándar de la industria para plugins de audio y sintetizadores virtuales.</li>
+          <li><strong>DAW (Digital Audio Workstation):</strong> Estación de trabajo de audio digital (FL Studio, Logic Pro, Ableton Live, Pro Tools) donde se cargan los plugins.</li>
+          <li><strong>DSP (Digital Signal Processing):</strong> Procesamiento digital de señales; algoritmos matemáticos que transforman el sonido.</li>
+          <li><strong>DC Filter:</strong> Filtro de corriente continua en la etapa final que elimina desplazamientos de offset y centra la onda de audio para maximizar el margen (<em>headroom</em>).</li>
+          <li><strong>Parallel Processing (Procesamiento en Paralelo):</strong> Técnica que suma la señal con efecto a la señal limpia original sin bajar el volumen de esta última.</li>
+          <li><strong>Soft Clipper:</strong> Algoritmo de saturación que recorta suavemente los picos de señal que superan los $0\text{ dBFS}$.</li>
+        </ul>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(0)">← Anterior: INICIO</button>
+        <button type="button" class="nav-step-btn" onclick="go(2)">Siguiente: PROCEDIMIENTO →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 2: PROCEDIMIENTO
+         ========================================== -->
+    <section class="tab-section" id="sec-procedimiento" data-t="PROCEDIMIENTO">
+      <h2>Procedimiento Paso a Paso: Desarrollo de "Busy Works Beats Plan B" by Rubén Sbarsky</h2>
+      <p>Sigue este procedimiento estructurado en 5 fases exactas para crear desde cero el plugin de masterización multiefecto <strong>Busy Works Beats Plan B</strong> en aproximadamente 4 minutos de generación inicial.</p>
+
+      <!-- FASE 1 -->
+      <div class="card">
+        <h3>Fase 1: Extracción Conceptual Desvinculada (Master Plan 2)</h3>
+        <p><strong>1. Objetivo:</strong> Extraer los módulos conceptuales de masterización de un plugin comercial de referencia (<em>Master Plan 2</em> de Music Hack) a partir de una captura de pantalla, sin clonar su código ni copiar su aspecto visual.</p>
+        <p><strong>2. Explicación sencilla:</strong> En lugar de pedir una copia ilegal, le pedimos a la IA que identifique qué hace el plugin de referencia (ecualización, saturación, imagen estéreo, limitación) y construya un plugin nuevo con nombres de parámetros distintos.</p>
+        <p><strong>3. Pasos numerados (1 acción por paso):</strong></p>
+        <ol>
+          <li>Toma una captura de pantalla de la interfaz del procesador de referencia (<em>Master Plan 2</em>).</li>
+          <li>Abre tu entorno de IA (ChatGPT / OpenAI Codex) y adjunta la imagen de referencia.</li>
+          <li>Introduce el prompt de extracción conceptual indicando el nuevo nombre <em>Busy Works Beats Plan B</em> y exigiendo renombrar todos los parámetros.</li>
+        </ol>
+        <p><strong>4. Motivo de la acción:</strong> Respetar los derechos de autor, evitar clones visuales y construir una arquitectura de marca propia simplificada.</p>
+        <p><strong>5. Resultado esperado:</strong> La IA desglosa los bloques funcionales necesarios para la cadena de masterización bajo una nueva nomenclatura.</p>
+        <p><strong>6. Solución a problemas probables:</strong> Si la IA intenta imitar los nombres exactos de los botones originales, recuérdale explícitamente: <em>"Rename the parameters. We are not making a clone or lookalike"</em>.</p>
+
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Fase 1 — Extracción Conceptual</span>
+            <button type="button" class="copy-btn" data-copy-target="prompt-f1">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="prompt-f1">Extract the mastering components of this plugin... Master Plan 2 by Music Hack. We're creating a new plugin called Busy Works Beats Plan B. It's a mastering plugin with a brand new interface, simplified, covering all the components in the Master Plan 2. Rename the parameters. We are not making a clone or lookalike. I want a brand new plugin.</div>
+        </div>
+      </div>
+
+      <!-- FASE 2 -->
+      <div class="card">
+        <h3>Fase 2: Restricciones de Seguridad, Presupuesto y Programación Desde Cero (From Scratch)</h3>
+        <p><strong>1. Objetivo:</strong> Aislar el proyecto para que la IA no reutilice código con licencias previas de nuestros repositorios locales y proteger el presupuesto semanal de tokens.</p>
+        <p><strong>2. Explicación sencilla:</strong> Como OpenAI Codex tiene acceso a las carpetas de tu computadora, debemos prohibirle tomar fragmentos de otros proyectos y limitar cuántos tokens puede gastar.</p>
+        <p><strong>3. Pasos numerados:</strong></p>
+        <ol>
+          <li>Selecciona el modelo en modo de razonamiento <em>Light</em> o <em>Fast</em> dentro de Codex.</li>
+          <li>Envía la instrucción de confinamiento de repositorios para forzar programación 100% desde cero (<em>from scratch</em>).</li>
+          <li>Añade la cláusula de salvaguarda para no exceder el 5% de tu presupuesto semanal de tokens.</li>
+        </ol>
+        <p><strong>4. Motivo de la acción:</strong> Evitar contaminación de licencias de software, dependencias rotas o el agotamiento prematuro de la cuota semanal de IA.</p>
+        <p><strong>5. Resultado esperado:</strong> Un directorio de proyecto limpio, independiente y de bajo consumo de tokens.</p>
+
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Fase 2 — Restricción de Código Desde Cero</span>
+            <button type="button" class="copy-btn" data-copy-target="prompt-f2">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="prompt-f2">Don't pull any source code from our repos. Start from scratch and don't use any of the Master Plan 2 plugin code.</div>
+        </div>
+      </div>
+
+      <!-- FASE 3 -->
+      <div class="card">
+        <h3>Fase 3: Diseño Visual e Interfaz Inspirada en Hardware (Drawmer MC3.1)</h3>
+        <p><strong>1. Objetivo:</strong> Dotar al plugin de una estética analógica profesional inspirada en las perillas y colores del controlador de monitores de estudio <strong>Drawmer MC3.1</strong>.</p>
+        <p><strong>2. Explicación sencilla:</strong> Si no especificas el diseño gráfico, la IA creará una lista aburrida de deslizadores genéricos. Al darle una referencia de hardware real, diseña una consola atractiva.</p>
+        <p><strong>3. Pasos numerados:</strong></p>
+        <ol>
+          <li>Proporciona la referencia visual del hardware <em>Drawmer MC3.1</em>.</li>
+          <li>Ejecuta el prompt de diseño estético pidiendo conservar el estilo de perillas (<em>knobs</em>) y paleta de colores en una interfaz original.</li>
+          <li>Verifica que la IA estructure los 5 módulos: <strong>Tono/Shape</strong>, <strong>Saturación/Carácter (Tape Reel)</strong>, <strong>Espacio/Cohesión (Space)</strong>, <strong>Finalización (Finish con filtro DC)</strong> y <strong>Paneles de Detalle (Detail)</strong>.</li>
+        </ol>
+        <p><strong>4. Resultado esperado:</strong> Renderizado gráfico organizado por módulos de masterización con estética de hardware de estudio.</p>
+
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Fase 3 — Diseño Estético Hardware</span>
+            <button type="button" class="copy-btn" data-copy-target="prompt-f3">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="prompt-f3">I like the knobs and colors from Drawmer MC3.1. Create unique novel interface.</div>
+        </div>
+      </div>
+
+      <!-- FASE 4 -->
+      <div class="card">
+        <h3>Fase 4: Generación y Expansión del Algoritmo DSP (Small Room Reverb)</h3>
+        <p><strong>1. Objetivo:</strong> Construir el motor matemático de audio en tiempo real y añadir una función espacial de reverberación de habitación pequeña (<em>small room reverb</em>).</p>
+        <p><strong>2. Explicación sencilla:</strong> Con la carcasa visual lista, ordenamos a la IA programar el sonido real de cada perilla e insertar una sala acústica corta para dar cohesión (<em>glue</em>) a la mezcla.</p>
+        <p><strong>3. Pasos numerados:</strong></p>
+        <ol>
+          <li>Ordena a OpenAI Codex continuar con la implementación del motor DSP completo.</li>
+          <li>Solicita la inclusión de la reverberación de habitación pequeña dentro del módulo <em>Space</em>.</li>
+          <li>Más adelante (en fase de control de calidad), exige que esta mezcla funcione en paralelo.</li>
+        </ol>
+
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Fase 4 — Expansión del Motor DSP</span>
+            <button type="button" class="copy-btn" data-copy-target="prompt-f4">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="prompt-f4">Continue making the DSP and I'll add one thing: add to space a small room reverb ability.</div>
+        </div>
+      </div>
+
+      <!-- FASE 5 -->
+      <div class="card">
+        <h3>Fase 5: Compilación, Corrección de UI e Instalación Forzada en DAW Activo</h3>
+        <p><strong>1. Objetivo:</strong> Compilar los binarios VST3/AU e instalarlos directamente en las carpetas del sistema operativo aunque tu DAW esté abierto.</p>
+        <p><strong>2. Explicación sencilla:</strong> Normalmente un instalador se detiene si detecta tu programa de música abierto. Con una orden directa a Codex, forzamos la sobreescritura e instalación inmediata.</p>
+        <p><strong>3. Pasos numerados:</strong></p>
+        <ol>
+          <li>Revisa si la interfaz compilada coincide con el diseño previo.</li>
+          <li>Envía el comando de instalación forzada ignorando si el DAW está en ejecución.</li>
+          <li>Escanea o recarga el plugin dentro de tu DAW y realiza la primera prueba auditiva con el techo del limitador (<em>ceiling</em>) a $-0.3\text{ dBFS}$.</li>
+        </ol>
+
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Fase 5 — Instalación Automatizada en DAW</span>
+            <button type="button" class="copy-btn" data-copy-target="prompt-f5">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="prompt-f5">Install regardless of open DAW.</div>
+        </div>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(1)">← Anterior: CONCEPTOS</button>
+        <button type="button" class="nav-step-btn" onclick="go(3)">Siguiente: PRÁCTICA →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 3: PRÁCTICA
+         ========================================== -->
+    <section class="tab-section" id="sec-practica" data-t="PRÁCTICA">
+      <h2>Proyectos Prácticos y Protocolo de Prueba a Ciegas de 7 Vías by Rubén Sbarsky</h2>
+
+      <div class="card">
+        <h3>Proyecto Integrador 1 vs. Proyecto Integrador 2</h3>
+        <div class="pedagogy-grid">
+          <div class="pedagogy-box">
+            <h4>Proyecto 1: "Busy Works Beats Plan B"</h4>
+            <ul>
+              <li><strong>Objetivo:</strong> Procesador multiefectos de masterización con UI inspirada en Drawmer MC3.1 en <strong>4 minutos</strong>.</li>
+              <li><strong>Flujo:</strong> Extracción conceptual → Prompt de seguridad → Renderizado UI → Compilación DSP → Instalación forzada.</li>
+              <li><strong>Resultado en Blind Test:</strong> Posición <strong>#6 de 7</strong>. Demuestra que un MVP sin calibración humana suena acartonado y agresivo.</li>
+            </ul>
+          </div>
+          <div class="pedagogy-box correct">
+            <h4>Proyecto 2: "Soft Clipper 3000"</h4>
+            <ul>
+              <li><strong>Objetivo:</strong> Saturador de crestas (<em>soft clipper</em>) optimizado para producción urbana en <strong>10 a 20 minutos</strong>.</li>
+              <li><strong>Flujo:</strong> Algoritmo de corte suave en ChatGPT → Ajuste humano fino de curvas de saturación → Optimización de respuesta de transitorios.</li>
+              <li><strong>Resultado en Blind Test:</strong> Posición <strong>#2 de 7</strong>, superando a plugins comerciales que tomaron 3 años de desarrollo.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Tabla Comparativa Oficial: Prueba a Ciegas (Blind Test) de 7 Vías en HOFA IQ-Series (Hawa)</h3>
+        <p>Para eliminar cualquier sesgo visual o de marca, Rubén Sbarsky cargó 7 procesadores sobre una misma pista de referencia bien conocida utilizando el software <strong>HOFA IQ-Series (Hawa)</strong> con nivelación de volumen e identidad oculta:</p>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Posición</th>
+                <th>Procesador Evaluado</th>
+                <th>Origen / Tiempo de Desarrollo</th>
+                <th>Diagnóstico Auditivo en la Prueba a Ciegas</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>1º Lugar 🏆</strong></td>
+                <td><strong>Busy Works Beats App Mastering 13 (ABM 13)</strong></td>
+                <td>Desarrollo propio refinado</td>
+                <td>Máxima claridad, profundidad, perforación de transitorios (<em>punch</em>) y volumen sin distorsión.</td>
+              </tr>
+              <tr>
+                <td><strong>2º Lugar 🥈</strong></td>
+                <td><strong>Soft Clipper 3000</strong></td>
+                <td>IA (ChatGPT) en 10-20 min + ajuste auditivo humano</td>
+                <td>Respuesta de transitorios y curvas de saturación excelentes; superó a plugins comerciales de 3 años.</td>
+              </tr>
+              <tr>
+                <td><strong>3º a 5º Lugar</strong></td>
+                <td><strong>Master Plan 2, Master Plan 1.5 y Apogee Limiter</strong></td>
+                <td>Plugins comerciales consolidados (hasta 3 años de desarrollo)</td>
+                <td>Sonido competitivo, pero mostraron exceso de crujido armónico áspero o un tono demasiado oscuro/suave en la pista de prueba.</td>
+              </tr>
+              <tr>
+                <td><strong>6º Lugar ⚠️</strong></td>
+                <td><strong>Busy Works Beats Plan B</strong></td>
+                <td>Prototipo bruto de IA generado en 4 minutos sin calibrar</td>
+                <td>Sonido acartonado, ecualización agresiva, dinámicas desequilibradas y controles sin pulir.</td>
+              </tr>
+              <tr>
+                <td><strong>7º Lugar</strong></td>
+                <td><strong>Limitador Open-Source de referencia</strong></td>
+                <td>Código abierto base</td>
+                <td>Menor competitividad sonora global frente al resto de procesadores evaluados.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Ejercicio Práctico Guiado con Solución Explicada</h3>
+        <p><strong>Situación de Laboratorio:</strong> Acabas de compilar tu primer prototipo de masterización con OpenAI Codex. Al subir la perilla <em>Room Mix</em> al 45% para darle cohesión espacial a tu mezcla de batería y voz, notas que el golpe del bombo y la presencia de la voz principal pierden volumen y se hunden hacia atrás.</p>
+        <p><strong>Pregunta de diagnóstico:</strong> ¿Qué fallo cometió la IA en la arquitectura del DSP y cómo debes aplicar tus procesos para no arruinar el balance tonal?</p>
+        <details class="qa-item">
+          <summary>👁️ Ver Solución Técnica Explicada</summary>
+          <div class="qa-body">
+            <p><strong>1. Causa técnica del problema:</strong> La IA programó el control <em>Room Mix</em> como un balance directo de señal (Dry/Wet clásico). Eso significa que al subir un 45% el efecto húmedo (Wet), reduce automáticamente un 45% el volumen de la señal limpia original (Dry).</p>
+            <p><strong>2. Corrección de arquitectura DSP:</strong> Debes instruir a la IA para que convierta la mezcla de reverberación a <strong>procesamiento en paralelo</strong> (<em>parallel processing</em>), de modo que la señal original permanezca al 100% de su nivel y la reverberación simplemente se sume por debajo.</p>
+            <p><strong>3. Orden correcto en la cadena de ajuste:</strong> Para evitar que la saturación o los efectos cambien drásticamente el tono balanceado de tu mezcla, aplica primero los procesos de <strong>ganancia y limitación</strong> (con el <em>ceiling</em> a $-0.3\text{ dBFS}$ y el <em>DC Filter</em> encendido) y deja la saturación armónica y la ecualización tonal para el final.</p>
+          </div>
+        </details>
+      </div>
+
+      <div class="card">
+        <h3>Lista de Comprobación Interactiva (Se guarda automáticamente tu progreso)</h3>
+        <p>Marca cada paso a medida que completes tu propio flujo de desarrollo de plugins con IA:</p>
+        <div id="interactive-checklist">
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk1" /> <span>Configurar OpenAI Codex local o Claude Code (Opus 5.5) y fijar modo Light/Fast con límite del 5% semanal de tokens.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk2" /> <span>Ejecutar extracción conceptual de un plugin de referencia renombrando todos los parámetros sin clonar.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk3" /> <span>Prohibir el uso de código de repositorios locales para programar 100% <em>from scratch</em>.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk4" /> <span>Definir referencia estética de hardware (ej. Drawmer MC3.1) para evitar una interfaz de simples deslizadores.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk5" /> <span>Verificar que los controles de <em>Bypass</em> y <em>DC Filter</em> sean botones binarios (ON/OFF) y no porcentajes.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk6" /> <span>Asegurar que los efectos espaciales (<em>Small Room Reverb</em>) sumen en paralelo sin atenuar la señal limpia.</span></label>
+          <label class="checklist-item"><input type="checkbox" data-check-id="chk7" /> <span>Ajustar el techo (<em>ceiling</em>) del limitador final a $-0.3\text{ dBFS}$ y evaluar en prueba a ciegas con HOFA IQ-Series (Hawa).</span></label>
+        </div>
+        <button type="button" class="tool-btn" id="reset-checklist-btn" style="margin-top:8px;">🔄 Reiniciar Lista de Comprobación</button>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(2)">← Anterior: PROCEDIMIENTO</button>
+        <button type="button" class="nav-step-btn" onclick="go(4)">Siguiente: PROMPTS →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 4: PROMPTS
+         ========================================== -->
+    <section class="tab-section" id="sec-prompts" data-t="PROMPTS">
+      <h2>Compendio Completo de Prompts y Dónde se Emplean by Rubén Sbarsky</h2>
+      <p>En esta sección tienes recopilados <strong>todos los prompts documentados en el tutorial</strong>, listos para copiar con un solo toque, junto con la explicación exacta de en qué fase y herramienta se emplea cada uno y su traducción técnica al castellano.</p>
+
+      <!-- PROMPT 1 -->
+      <div class="card">
+        <h3>1. Prompt de Extracción Conceptual Desvinculada</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase 1 del desarrollo de "Busy Works Beats Plan B"</strong> dentro de ChatGPT u OpenAI Codex, adjuntando una captura de pantalla del plugin de referencia (<em>Master Plan 2</em> de Music Hack) para extraer sus módulos de masterización sin hacer un clon.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-1">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-1">Extract the mastering components of this plugin... Master Plan 2 by Music Hack. We're creating a new plugin called Busy Works Beats Plan B. It's a mastering plugin with a brand new interface, simplified, covering all the components in the Master Plan 2. Rename the parameters. We are not making a clone or lookalike. I want a brand new plugin.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "Extrae los componentes de masterización de este plugin... Master Plan 2 de Music Hack. Estamos creando un nuevo plugin llamado Busy Works Beats Plan B. Es un plugin de masterización con una interfaz completamente nueva, simplificada, que cubre todos los componentes de Master Plan 2. Renombra los parámetros. No estamos haciendo un clon ni una imitación visual. Quiero un plugin completamente nuevo."</em></small></p>
+      </div>
+
+      <!-- PROMPT 2 -->
+      <div class="card">
+        <h3>2. Prompt de Restricción de Seguridad y Código Desde Cero (From Scratch)</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase 2 dentro de OpenAI Codex</strong> (aplicación local de escritorio), inmediatamente antes de iniciar la generación de archivos C++/JUCE, para impedir que el agente tome código con derechos de autor o dependencias previas de tus repositorios locales.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-2">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-2">Don't pull any source code from our repos. Start from scratch and don't use any of the Master Plan 2 plugin code.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "No extraigas ningún código fuente de nuestros repositorios. Empieza desde cero y no utilices nada del código del plugin Master Plan 2."</em></small></p>
+      </div>
+
+      <!-- PROMPT 3 -->
+      <div class="card">
+        <h3>3. Prompt de Diseño Visual Inspirado en Hardware Analógico</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase 3 de Diseño de Interfaz Gráfica (UI/UX)</strong>, aportando como referencia estética el controlador de monitores de estudio <em>Drawmer MC3.1</em> para que la IA construya perillas y colores profesionales en lugar de deslizadores genéricos sin formato.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-3">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-3">I like the knobs and colors from Drawmer MC3.1. Create unique novel interface.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "Me gustan las perillas y los colores del Drawmer MC3.1. Crea una interfaz novedosa y única."</em></small></p>
+      </div>
+
+      <!-- PROMPT 4 -->
+      <div class="card">
+        <h3>4. Prompt de Generación y Expansión del Motor DSP (Small Room Reverb)</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase 4 de Programación del Algoritmo DSP</strong> en OpenAI Codex, cuando la interfaz visual ya está estructurada y se requiere programar el procesamiento de audio en tiempo real añadiendo una reverberación de sala pequeña al módulo <em>Space</em>.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-4">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-4">Continue making the DSP and I'll add one thing: add to space a small room reverb ability.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "Continúa creando el DSP y añadiré una cosa: agrega al módulo Space una capacidad de reverberación de habitación pequeña."</em></small></p>
+      </div>
+
+      <!-- PROMPT 5 -->
+      <div class="card">
+        <h3>5. Prompt de Compilación e Instalación Forzada con DAW Abierto</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase 5 de Compilación e Instalación</strong> en OpenAI Codex local, cuando necesitas compilar el binario VST3/AU y sobreescribirlo en las carpetas del sistema operativo sin tener que cerrar tu DAW (FL Studio, Logic Pro, Ableton, etc.).</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-5">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-5">Install regardless of open DAW.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "Instálalo independientemente de que el DAW esté abierto."</em></small></p>
+      </div>
+
+      <!-- PROMPT 6 -->
+      <div class="card">
+        <h3>6. Prompt de Corrección Arquitectónica: Conversión a Procesamiento en Paralelo</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Fase de Control de Calidad y Refinamiento Sonoro</strong> tras audicionar el primer prototipo en el DAW, cuando detectas que subir el control de reverberación (<em>Room Mix</em>) atenúa el volumen de la señal limpia original.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Prompt Original en Inglés (Listo para usar)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-6">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-6">Room mix doesn't need to be a direct signal balance. It needs to be in parallel so that we're not turning down the original signal as we're turning up the reverb.</div>
+        </div>
+        <p><small><em>Traducción de referencia: "La mezcla de habitación (Room mix) no necesita ser un balance directo de señal. Necesita estar en paralelo para que no estemos bajando el volumen de la señal original a medida que subimos la reverberación."</em></small></p>
+      </div>
+
+      <!-- PROMPT 7 -->
+      <div class="card">
+        <h3>7. Directriz de Salvaguarda Presupuestaria de Tokens y Limpieza de UI</h3>
+        <p><strong>📍 Dónde se emplea:</strong> En la <strong>Configuración de Reglas Operativas de OpenAI Codex</strong> antes de iterar o corregir errores de textos corruptos y botones binarios (<em>Bypass / DC Filter</em>), asegurando que la IA no consuma más del 5% del presupuesto semanal de tokens.</p>
+        <div class="copy-block">
+          <div class="copy-header">
+            <span class="copy-label">Directriz de Control de Presupuesto y UI (Documentada)</span>
+            <button type="button" class="copy-btn" data-copy-target="p-all-7">📋 COPIAR</button>
+          </div>
+          <div class="copy-content" id="p-all-7">Stay within 5% of the weekly token budget using Light/Fast reasoning mode. Remove internal design system labels from the GUI and make Bypass and DC Filter binary ON/OFF switches instead of percentage sliders.</div>
+        </div>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(3)">← Anterior: PRÁCTICA</button>
+        <button type="button" class="nav-step-btn" onclick="go(5)">Siguiente: 33 Preguntas (Q&amp;A) →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 5: 33 Preguntas (Q&A)
+         ========================================== -->
+    <section class="tab-section" id="sec-qa" data-t="33 Preguntas (Q&A)">
+      <h2>Compendio Exhaustivo de 33 Preguntas y Respuestas (Q&amp;A) by Rubén Sbarsky</h2>
+      <p>Las 33 preguntas y respuestas oficiales están ordenadas rigurosamente por nivel de dificultad: <strong>Nivel 1 (Básico: 1 a 11)</strong>, <strong>Nivel 2 (Avanzado: 12 a 22)</strong> y <strong>Nivel 3 (PRO: 23 a 33)</strong>.</p>
+
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;">
+        <button type="button" class="secondary-action-btn" id="expand-all-qa-btn">➕ Desplegar las 33 Respuestas</button>
+        <button type="button" class="secondary-action-btn" id="collapse-all-qa-btn">➖ Plegar Todas</button>
+      </div>
+
+      <!-- NIVEL 1 -->
+      <div class="card">
+        <span class="badge level-1">NIVEL 1 — BÁSICO (Preguntas 1 a 11)</span>
+        <h3>Fundamentos, Herramientas e Inicio Rápido</h3>
+
+        <details class="qa-item" open>
+          <summary><span>1. ¿Qué costo mensual tiene utilizar ChatGPT para crear plugins?</span></summary>
+          <div class="qa-body"><p>Aproximadamente <strong>$20 al mes</strong> para acceder a los modelos avanzados de OpenAI.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>2. ¿Es necesario tener conocimientos avanzados de programación para empezar?</span></summary>
+          <div class="qa-body"><p><strong>No</strong>, la IA se encarga de escribir la estructura del código y compilar los archivos iniciales.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>3. ¿Qué herramienta permite a la IA interactuar directamente con los archivos de la computadora?</span></summary>
+          <div class="qa-body"><p><strong>OpenAI Codex</strong>, una aplicación ejecutable de escritorio que opera de forma local.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>4. ¿Qué alternativa a OpenAI Codex ofrece gran precisión en tareas complejas?</span></summary>
+          <div class="qa-body"><p><strong>Claude Code</strong> utilizando el modelo <strong>Claude Opus 5.5</strong> de Anthropic configurado en modo <em>High</em>.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>5. ¿Qué significa crear un Producto Mínimo Viable (MVP) de un plugin?</span></summary>
+          <div class="qa-body"><p>Significa generar una primera versión funcional del software con sus características básicas antes de someterlo a refinamiento auditivo y técnico.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>6. ¿Por qué no se debe clonar directamente un plugin comercial existente?</span></summary>
+          <div class="qa-body"><p>Por razones éticas, de derechos de autor y para construir un producto único con marca, nomenclatura e interfaz propia.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>7. ¿En qué consiste la extracción conceptual de un plugin?</span></summary>
+          <div class="qa-body"><p>En analizar las funciones de un procesador de referencia (como ecualización, saturación o compresión) e instruir a la IA para replicar esas capacidades bajo una arquitectura y parámetros diferentes.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>8. ¿Qué hardware de audio se utilizó como inspiración visual para el plugin Plan B?</span></summary>
+          <div class="qa-body"><p>El controlador de monitores de estudio <strong>Drawmer MC3.1</strong>.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>9. ¿Qué es un DAW?</span></summary>
+          <div class="qa-body"><p>Una Estación de Trabajo de Audio Digital (<em>Digital Audio Workstation</em>), como FL Studio, Logic Pro, Ableton Live o Pro Tools, utilizada para cargar y ejecutar los plugins.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>10. ¿Cuánto tiempo tardó la IA en generar la interfaz y el DSP inicial del plugin Plan B?</span></summary>
+          <div class="qa-body"><p>Aproximadamente <strong>4 minutos</strong> en total.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>11. ¿Dónde se pueden descargar o ubicar los plugins terminados en el sistema?</span></summary>
+          <div class="qa-body"><p>Se compilan e instalan directamente en las carpetas de plugins <strong>VST3/AU</strong> del sistema operativo.</p></div>
+        </details>
+      </div>
+
+      <!-- NIVEL 2 -->
+      <div class="card">
+        <span class="badge level-2">NIVEL 2 — AVANZADO (Preguntas 12 a 22)</span>
+        <h3>Arquitectura de Audio, Tokens, Pruebas a Ciegas y Depuración de UI</h3>
+
+        <details class="qa-item">
+          <summary><span>12. ¿Qué diferencia existe entre el modo Fast y los modos de alto razonamiento en los modelos de IA?</span></summary>
+          <div class="qa-body"><p>El modo <strong>Fast / Light</strong> genera soluciones inmediatas consumiendo menos tokens, mientras que los modos de alto razonamiento (<strong>Ultra Mode</strong>) ponderan múltiples arquitecturas de código antes de responder.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>13. ¿Cómo se puede evitar que la IA consuma todo el saldo semanal de tokens en un solo proyecto?</span></summary>
+          <div class="qa-body"><p>Incluyendo en los prompts instrucciones explícitas de salvaguarda presupuestaria (por ejemplo, limitar el gasto a un <strong>5% del presupuesto semanal</strong>).</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>14. ¿Por qué es vital prohibir a la IA el uso de código de repositorios previos?</span></summary>
+          <div class="qa-body"><p>Para garantizar que la programación se realice totalmente desde cero (<em>from scratch</em>) y evitar conflictos de licencias, derechos de autor o dependencias corruptas.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>15. ¿Qué problema de audio ocurre si la mezcla de reverberación no se configura en paralelo?</span></summary>
+          <div class="qa-body"><p>Al aumentar el control de mezcla (Dry/Wet directo), el volumen de la señal original limpia se reduce, haciendo que la pista pierda presencia y cuerpo.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>16. ¿Qué es la prueba de audición a ciegas (Blind Test) y por qué es indispensable?</span></summary>
+          <div class="qa-body"><p>Es un método de evaluación objetiva que oculta los nombres e interfaces de los plugins para juzgar el rendimiento sonoro real sin sesgos de marca o diseño visual.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>17. ¿Qué software se recomienda en el tutorial para realizar pruebas a ciegas?</span></summary>
+          <div class="qa-body"><p><strong>HOFA IQ-Series (Hawa)</strong>.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>18. ¿Por qué un interruptor de Bypass no debe configurarse como un deslizador de 0% a 100%?</span></summary>
+          <div class="qa-body"><p>Porque el <em>bypass</em> es una función binaria (encendido/apagado); los valores intermedios en porcentaje carecen de sentido técnico como interruptor de desactivación.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>19. ¿Qué función cumple el filtro DC (DC Filter) en la etapa final de un plugin de masterización?</span></summary>
+          <div class="qa-body"><p>Elimina los desplazamientos de corriente continua (<em>DC offset</em>) para centrar la onda de audio y maximizar el margen de cabeza (<em>headroom</em>).</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>20. ¿A qué valor se recomienda ajustar el techo (ceiling) del limitador para evitar distorsiones indeseadas?</span></summary>
+          <div class="qa-body"><p>A <strong>$-0.3\text{ dBFS}$</strong>.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>21. ¿Qué causa la aparición de textos aleatorios o etiquetas no deseadas en la interfaz gráfica del plugin?</span></summary>
+          <div class="qa-body"><p>Interferencias o residuos de los sistemas de diseño de interfaz internos o reglas globales previas del proyecto del desarrollador.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>22. ¿Cómo se corrige la falta de alineación gráfica cuando la UI visual no coincide con los parámetros internos?</span></summary>
+          <div class="qa-body"><p>Instruyendo a la IA para regenerar la interfaz, limpiar la jerarquía gráfica e instalar el paquete forzadamente en el sistema.</p></div>
+        </details>
+      </div>
+
+      <!-- NIVEL 3 -->
+      <div class="card">
+        <span class="badge level-3">NIVEL 3 — PRO (Preguntas 23 a 33)</span>
+        <h3>Maestría Acústica, Ingeniería DSP Avanzada y Competitividad Comercial</h3>
+
+        <details class="qa-item">
+          <summary><span>23. ¿Por qué el plugin Plan B (desarrollado en 4 minutos) ocupó el puesto #6 de 7 en la prueba a ciegas?</span></summary>
+          <div class="qa-body"><p>Porque los prompts directos sin calibración auditiva humana producen un procesador con sonido acartonado, ecualizaciones agresivas y dinámicas desequilibradas.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>24. ¿Por qué el plugin Soft Clipper 3000 logró el puesto #2 superando a softwares comerciales desarrollados durante 3 años?</span></summary>
+          <div class="qa-body"><p>Porque aunque la estructura base fue generada por IA en 10-20 minutos, el desarrollador utilizó su juicio auditivo para calibrar finamente las curvas de saturación y la respuesta de transitorios.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>25. ¿Cuál es la verdadera habilidad requerida en el desarrollo moderno de plugins con IA?</span></summary>
+          <div class="qa-body"><p>El dominio del diseño sonoro y el entrenamiento auditivo para identificar deficiencias acústicas y guiar a la IA en la corrección fina del DSP.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>26. ¿Cómo influye la selección del modelo de IA (ej. GPT-6 Astra) en la resolución de problemas de DSP complejo?</span></summary>
+          <div class="qa-body"><p>Los modelos premier poseen mayor capacidad de razonamiento técnico para resolver algoritmos matemáticos complejos sin generar errores de sintaxis.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>27. ¿Qué técnica se utiliza para evitar que la adición de saturación modifique de forma drástica el tono balanceado de una mezcla?</span></summary>
+          <div class="qa-body"><p>Aplicar primero los procesos de ganancia y limitación, dejando la saturación armónica y la ecualización tonal para el final de la cadena de ajuste.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>28. ¿Cómo se comporta el parámetro de densidad en un algoritmo de masterización?</span></summary>
+          <div class="qa-body"><p>Modifica el tratamiento de los transitorios para aumentar la percepción de profundidad, cuerpo y cohesión en la mezcla.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>29. ¿Qué ventaja ofrece OpenAI Codex al ejecutarse de forma local frente a una API web?</span></summary>
+          <div class="qa-body"><p>Permite modificar archivos del sistema, compilar bibliotecas C++/JUCE y colocar binarios en carpetas del sistema sin requerir confirmaciones constantes de red.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>30. ¿Cómo afecta la presencia de crujidos armónicos indeseados a la clasificación de un procesador de masterización en un Blind Test?</span></summary>
+          <div class="qa-body"><p>Los procesadores con saturación excesiva son descartados en pistas limpias por sonar ásperos o fatigantes en comparaciones directas.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>31. ¿Qué representa la pestaña o panel de detalle (Detail Panel) en una interfaz de plugin profesional?</span></summary>
+          <div class="qa-body"><p>Un espacio reservado para exponer controles secundarios o avanzados sin saturar la vista principal del usuario.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>32. ¿Por qué es fundamental utilizar una misma pista de prueba conocida al audicionar múltiples procesadores?</span></summary>
+          <div class="qa-body"><p>Porque el conocimiento profundo de una pista de referencia permite detectar variaciones milimétricas en respuesta de frecuencia, transitorios y ancho estéreo.</p></div>
+        </details>
+
+        <details class="qa-item">
+          <summary><span>33. ¿Cuál es la diferencia entre la velocidad de generación de código y la calidad sonora alcanzada?</span></summary>
+          <div class="qa-body"><p>La velocidad de generación es muy alta (código funcional en 4 minutos), pero la calidad sonora óptima solo se logra mediante iteraciones sucesivas de pruebas a ciegas y ajuste humano de parámetros.</p></div>
+        </details>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(4)">← Anterior: PROMPTS</button>
+        <button type="button" class="nav-step-btn" onclick="go(6)">Siguiente: ERRORES →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 6: ERRORES
+         ========================================== -->
+    <section class="tab-section" id="sec-errores" data-t="ERRORES">
+      <h2>Control de Calidad y Solución de Errores (Troubleshooting) by Rubén Sbarsky</h2>
+      <p>Incluso utilizando modelos premier como GPT-6 Astra o Claude Opus 5.5, la primera versión de un plugin suele presentar fallos de interfaz y de arquitectura acústica. Aquí tienes el protocolo exacto para diagnosticarlos y resolverlos:</p>
+
+      <div class="card">
+        <h3>1. Interfaz sin formato (Lista de Sliders Genéricos)</h3>
+        <p><strong>Síntoma:</strong> Al abrir el plugin en el DAW, solo aparece una columna vertical de deslizadores grises estándar sin el diseño inspirado en hardware.</p>
+        <p><strong>Causa:</strong> El código bruto expuso los parámetros de audio al host del DAW, pero no vinculó la capa gráfica o el binario antiguo siguió en caché.</p>
+        <p><strong>Solución:</strong> Proporcionar una referencia estética explícita (<em>"I like the knobs and colors from Drawmer MC3.1. Create unique novel interface"</em>) y ejecutar el comando de recompilación e instalación forzada (<em>"Install regardless of open DAW"</em>).</p>
+      </div>
+
+      <div class="card">
+        <h3>2. Textos Corruptos, Garabateados o Etiquetas No Solicitadas en la GUI</h3>
+        <p><strong>Síntoma:</strong> Aparecen textos superpuestos, etiquetas de depuración o palabras sin sentido en las esquinas de la ventana del plugin.</p>
+        <p><strong>Causa:</strong> Residuos e interferencias del sistema de diseño interno o reglas previas del directorio del desarrollador.</p>
+        <p><strong>Solución:</strong> Ordenar explícitamente a la IA eliminar las etiquetas del sistema de diseño interno y limpiar la jerarquía visual de la GUI.</p>
+      </div>
+
+      <div class="card">
+        <h3>3. Controles Binarios Mal Configurados (Bypass en Porcentaje 0% a 100%)</h3>
+        <p><strong>Síntoma:</strong> El botón de <em>Bypass</em> o el filtro <em>DC Filter</em> se comporta como una perilla continua de $0\%$ a $100\%$ en lugar de encenderse o apagarse.</p>
+        <p><strong>Causa:</strong> La IA trató todos los parámetros del vector de entrada como flotantes continuos normalizados ($0.0\text{ a }1.0$).</p>
+        <p><strong>Solución:</strong> Exigir en el prompt que funciones como <em>Bypass</em>, <em>DC Filter</em> o <em>Mono Audition</em> se declaren como conmutadores booleanos binarios (<strong>ON/OFF</strong>).</p>
+      </div>
+
+      <div class="card">
+        <h3>4. Pérdida de Volumen y Cuerpo al Subir la Reverberación (Dry/Wet Directo)</h3>
+        <p><strong>Síntoma:</strong> Al subir el parámetro <em>Room Mix</em> del módulo <em>Space</em>, la mezcla original pierde pegada y se aleja.</p>
+        <p><strong>Causa:</strong> Implementación de balance directo Dry/Wet que atenúa la señal limpia a medida que incrementa el efecto.</p>
+        <p><strong>Solución:</strong> Aplicar el prompt de conversión a paralelo: <em>"Room mix doesn't need to be a direct signal balance. It needs to be in parallel so that we're not turning down the original signal as we're turning up the reverb."</em></p>
+      </div>
+
+      <div class="card">
+        <h3>5. Distorsión Agresiva o Recorte Digital Indeseado en la Etapa Final</h3>
+        <p><strong>Síntoma:</strong> El plugin satura de forma áspera al empujar la ganancia de entrada (<em>feed</em>).</p>
+        <p><strong>Causa:</strong> El techo del limitador está en $0.0\text{ dBFS}$ sin margen para picos intermuestreo o se aplicó ecualización agresiva antes de controlar la dinámica.</p>
+        <p><strong>Solución:</strong> Fijar el techo (<em>ceiling</em>) del limitador final a <strong>$-0.3\text{ dBFS}$</strong>, activar el <em>DC Filter</em>, revisar la ganancia de entrada (<em>feed</em>) y ajustar primero la ganancia/limitación dejando la saturación y ecualización tonal para el final.</p>
+      </div>
+
+      <div class="card">
+        <h3>6. Agotamiento Prematuro del Presupuesto Semanal de Tokens</h3>
+        <p><strong>Síntoma:</strong> La plataforma bloquea el uso del modelo premier tras unas pocas iteraciones.</p>
+        <p><strong>Causa:</strong> Uso continuo del modo <em>Ultra</em> sin restricciones de consumo.</p>
+        <p><strong>Solución:</strong> Cambiar el nivel de razonamiento a <strong>Light Mode / Fast Mode</strong> para prototipado e incluir la restricción explícita de no superar el <strong>5% del presupuesto semanal</strong> por tarea.</p>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(5)">← Anterior: 33 Preguntas (Q&amp;A)</button>
+        <button type="button" class="nav-step-btn" onclick="go(7)">Siguiente: RESUMEN →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 7: RESUMEN
+         ========================================== -->
+    <section class="tab-section" id="sec-resumen" data-t="RESUMEN">
+      <h2>Resumen Ejecutivo por Capítulos by Rubén Sbarsky</h2>
+
+      <div class="card">
+        <h3>1. Síntesis del Nuevo Paradigma</h3>
+        <ul>
+          <li>La IA ha reducido de años a minutos la escritura de código C++/JUCE para plugins de audio.</li>
+          <li>Un plugin generado en 4 minutos sin intervención humana (como el prototipo inicial <em>Plan B</em>) es solo un <strong>Producto Mínimo Viable (MVP)</strong> que ocupó el puesto #6 de 7 en pruebas a ciegas.</li>
+          <li>Un plugin generado en 10-20 minutos pero <strong>refinado por el oído humano</strong> (como <em>Soft Clipper 3000</em>) ocupó el puesto #2 de 7, superando a softwares comerciales con 3 años de desarrollo.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>2. Reglas de Oro del Flujo de Trabajo</h3>
+        <ol>
+          <li><strong>Extracción sin Clonación:</strong> Extrae conceptos de plugins consolidados (<em>Master Plan 2</em>) pero renombra todos los parámetros y crea una interfaz original.</li>
+          <li><strong>Aislamiento de Código:</strong> Prohibe siempre usar repositorios previos para programar 100% <em>from scratch</em>.</li>
+          <li><strong>Control de Tokens:</strong> Usa modo <em>Light/Fast</em> para prototipos y limita el gasto al 5% semanal.</li>
+          <li><strong>Arquitectura Sonora Limpia:</strong> Exige procesamiento en paralelo para efectos espaciales, conmutadores binarios ON/OFF para <em>Bypass/DC Filter</em> y techo de limitación a $-0.3\text{ dBFS}$.</li>
+          <li><strong>Auditoría a Ciegas:</strong> Nunca confíes solo en tus ojos; valida cada versión en <strong>HOFA IQ-Series (Hawa)</strong> sobre una pista de referencia que conozcas a la perfección.</li>
+        </ol>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(6)">← Anterior: ERRORES</button>
+        <button type="button" class="nav-step-btn" onclick="go(8)">Siguiente: FUENTES →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 8: FUENTES
+         ========================================== -->
+    <section class="tab-section" id="sec-fuentes" data-t="FUENTES">
+      <h2>Fuentes Fiables, Enlaces Oficiales y Documentación by Rubén Sbarsky</h2>
+      <p>Todas las fuentes, herramientas y enlaces documentados en el material original disponen a continuación de su URL íntegra copiable y de su botón obligatorio <strong>"Abrir enlace en nueva ventana"</strong>.</p>
+
+      <!-- ENLACE 1 -->
+      <div class="card">
+        <h3>1. Video Tutorial Original de Referencia</h3>
+        <p><strong>Título:</strong> <em>"Make ANY Plugin with ChatGPT"</em> — Por Rubén Sbarsky (Canal: <strong>Busy Works Beats</strong>).</p>
+        <div class="url-box">
+          <span class="url-text" id="url-yt">https://youtube.com/watch?v=dElTDXUKxXs&amp;is=BI2kQWS3W1PQ7IIj</span>
+          <div class="url-actions">
+            <a href="https://youtube.com/watch?v=dElTDXUKxXs&is=BI2kQWS3W1PQ7IIj" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-yt">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 2 -->
+      <div class="card">
+        <h3>2. Recurso Oficial del Plugin Gratuito "Soft Clipper 3000"</h3>
+        <p><strong>Descripción:</strong> Descarga oficial del saturador de crestas <em>Soft Clipper 3000</em> de Busy Works Beats (Clasificado #2 en la prueba a ciegas de 7 vías).</p>
+        <div class="url-box">
+          <span class="url-text" id="url-sc">https://busyworksbeats.com/softclipper</span>
+          <div class="url-actions">
+            <a href="https://busyworksbeats.com/softclipper" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-sc">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 3 -->
+      <div class="card">
+        <h3>3. OpenAI (ChatGPT y Documentación de OpenAI Codex)</h3>
+        <p><strong>Descripción:</strong> Plataforma oficial de modelos de lenguaje y agente ejecutable local para desarrollo de código y compilación.</p>
+        <div class="url-box">
+          <span class="url-text" id="url-openai">https://openai.com</span>
+          <div class="url-actions">
+            <a href="https://openai.com" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-openai">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 4 -->
+      <div class="card">
+        <h3>4. Anthropic Claude (Claude Code / Claude Opus 5.5)</h3>
+        <p><strong>Descripción:</strong> Documentación oficial de Anthropic para programación local de alta precisión en modo <em>High</em>.</p>
+        <div class="url-box">
+          <span class="url-text" id="url-claude">https://www.anthropic.com/claude</span>
+          <div class="url-actions">
+            <a href="https://www.anthropic.com/claude" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-claude">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 5 -->
+      <div class="card">
+        <h3>5. HOFA-Plugins (Software de Pruebas a Ciegas HOFA IQ-Series / Hawa)</h3>
+        <p><strong>Descripción:</strong> Herramienta especializada para auditoría acústica y pruebas a ciegas A/B/N con nivelación automática e identidad oculta.</p>
+        <div class="url-box">
+          <span class="url-text" id="url-hofa">https://hofa-plugins.de</span>
+          <div class="url-actions">
+            <a href="https://hofa-plugins.de" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-hofa">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 6 -->
+      <div class="card">
+        <h3>6. Music Hack (Referencia Conceptual Master Plan)</h3>
+        <p><strong>Descripción:</strong> Referencia conceptual analizada en la Fase 1 para la extracción desvinculada de módulos de masterización.</p>
+        <div class="url-box">
+          <span class="url-text" id="url-musichack">https://www.musichack.com</span>
+          <div class="url-actions">
+            <a href="https://www.musichack.com" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-musichack">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENLACE 7 -->
+      <div class="card">
+        <h3>7. Drawmer Electronics (Referencia de Hardware Drawmer MC3.1)</h3>
+        <p><strong>Descripción:</strong> Especificaciones y diseño del controlador de monitores de estudio que inspiró las perillas y colores de la interfaz de <em>Plan B</em>.</p>
+        <div class="url-box">
+          <span class="url-text" id="url-drawmer">https://www.drawmer.com</span>
+          <div class="url-actions">
+            <a href="https://www.drawmer.com" target="_blank" rel="noopener noreferrer" class="ext-link-btn">🔗 Abrir enlace en nueva ventana</a>
+            <button type="button" class="copy-btn" data-copy-target="url-drawmer">📋 COPIAR URL</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(7)">← Anterior: RESUMEN</button>
+        <button type="button" class="nav-step-btn" onclick="go(9)">Siguiente: CRÉDITOS →</button>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         PESTAÑA 9: CRÉDITOS (ORDEN OBLIGATORIO ESTRICTO)
+         ========================================== -->
+    <section class="tab-section" id="sec-creditos" data-t="CRÉDITOS">
+      <!-- 1. Título de la sección -->
+      <h2>CRÉDITOS by Rubén Sbarsky</h2>
+
+      <!-- 2. SVG animado compartido con INICIO (en primera pantalla) -->
+      <div class="svg-stage-wrapper">
+        <div class="svg-mount-target" id="svg-credits-container" role="region" aria-label="Ilustración vectorial animada compartida: Síntesis entre el motor de IA OpenAI Codex y la consola de masterización Busy Works Beats Plan B"></div>
+        <div class="svg-controls-bar">
+          <span>Instancia Gemela Sincronizada desde Plantilla Única</span>
+          <button type="button" class="tool-btn" id="toggle-svg-anim-credits" aria-label="Pausar o reanudar animación SVG en créditos">⏯ Animación</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <!-- 3. Breve descripción de la ilustración -->
+        <p style="text-align:center; color:var(--text-secondary); font-size:0.9rem;">
+          <strong>Descripción de la ilustración:</strong> Escena vectorial multicapa en formato vertical 4:5 que representa la convergencia entre el núcleo neuronal de Inteligencia Artificial (OpenAI Codex / GPT-6 Astra), la consola de masterización <em>Busy Works Beats Plan B</em> inspirada en el hardware Drawmer MC3.1 (con carrete de cinta <em>Shape/Tape</em>, perilla <em>Parallel Space</em> y conmutadores binarios <em>DC Filter / Bypass</em>) y los medidores dinámicos del <em>Soft Clipper 3000</em> auditados mediante pruebas a ciegas en HOFA IQ-Series (Hawa).
+        </p>
+
+        <!-- 4. Nombre del autor (elemento visual más destacado) -->
+        <div class="author-hero-name">Rubén Sbarsky</div>
+
+        <!-- 5. Texto «Autor del tutorial» -->
+        <div class="author-role-subtitle">Autor del tutorial</div>
+
+        <!-- 6. Información adicional pertinente -->
+        <div style="border-top:1px solid var(--border-color); padding-top:14px; margin-top:10px;">
+          <p><strong>Metodología y Dirección Técnica:</strong> Basado en la investigación práctica de creación de plugins VST3/AU con Inteligencia Artificial y validación acústica mediante pruebas a ciegas (<em>Blind Testing</em>) de Rubén Sbarsky (Busy Works Beats).</p>
+          <p><strong>Arquitectura de Software:</strong> Desarrollado bajo el estándar <em>Clean Code &amp; Software Craftsmanship (v2.0)</em> y auditado con metodología adversarial <em>GAUNTLET V3</em>. Optimizado para visualización y control táctil en dispositivos móviles desde $360\text{ px}$ (incluyendo Samsung Galaxy A02s) y estaciones de escritorio.</p>
+          <p><strong>Fecha y hora de creación (Sincronización fija):</strong> <code>05/11/2026 — 13:24:44</code></p>
+        </div>
+
+        <!-- 7. Número de versión -->
+        <div style="margin-top:14px; text-align:center;">
+          <span class="badge" style="font-size:0.95rem; padding:6px 16px;">Versión del Entregable: V001 (tutorial_creacion_plugins_audio_ia_V001.html)</span>
+        </div>
+      </div>
+
+      <div class="tab-footer-nav">
+        <button type="button" class="nav-step-btn" onclick="go(8)">← Anterior: FUENTES</button>
+        <button type="button" class="nav-step-btn" onclick="go(0)">↺ Volver a INICIO</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTONES FLOTANTES MOVIBLES (ARRASTRABLES) -->
+  <button type="button" class="floating-draggable" id="float-home-btn" title="Arrástrame o pulsa para ir a INICIO" aria-label="Ir a la pestaña INICIO (Botón flotante movible)">🏠 INICIO</button>
+  <button type="button" class="floating-draggable" id="float-top-btn" title="Arrástrame o pulsa para subir al comienzo de la pestaña actual" aria-label="Volver arriba de la pestaña actual (Botón flotante movible)">⬆️ ARRIBA</button>
+
+  <!-- NOTIFICACIÓN TOAST -->
+  <div id="toast-message" role="status" aria-live="polite"></div>
+
+  <!-- JAVASCRIPT LIMPIO Y MODULAR (CLEAN CODE V2.0) -->
+  <script>
+    (function () {
+      'use strict';
+
+      /* ==========================================================================
+         1. ESTADO DE LA APLICACIÓN Y CONSTANTES
+         ========================================================================== */
+      const STORAGE_KEYS = {
+        ACTIVE_TAB: 'bwb_tutorial_active_tab_v001',
+        THEME: 'bwb_tutorial_theme_v001',
+        FONT_SCALE: 'bwb_tutorial_font_scale_v001',
+        CHECKLIST: 'bwb_tutorial_checklist_v001',
+        FLOAT_HOME_POS: 'bwb_float_home_pos_v001',
+        FLOAT_TOP_POS: 'bwb_float_top_pos_v001'
+      };
+
+      const secs = Array.from(document.querySelectorAll('.tab-section'));
+      const navChips = Array.from(document.querySelectorAll('.chip[data-tab-target]'));
+      const dr = document.querySelector('#dr');
+      const mb = document.querySelector('#mb');
+
+      let currentTabIndex = 0;
+      let svgMasterTemplateString = '';
+      let isSvgPaused = false;
+      let closedDetailsBeforePrint = [];
+
+      /* ==========================================================================
+         2. GESTIÓN SEGURA DE LOCALSTORAGE
+         ========================================================================== */
+      function saveToStorage(key, value) {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(value));
+        } catch (storageError) {
+          /* Continúa funcionando aunque el navegador bloquee localStorage */
+        }
+      }
+
+      function loadFromStorage(key, fallbackValue) {
+        try {
+          const rawValue = window.localStorage.getItem(key);
+          return rawValue !== null ? JSON.parse(rawValue) : fallbackValue;
+        } catch (storageError) {
+          return fallbackValue;
+        }
+      }
+
+      /* ==========================================================================
+         3. NOTIFICACIONES VISUALES (TOAST)
+         ========================================================================== */
+      let toastTimeoutId = null;
+      function showToast(messageText) {
+        const toastEl = document.getElementById('toast-message');
+        if (!toastEl) return;
+        toastEl.textContent = messageText;
+        toastEl.classList.add('visible');
+        if (toastTimeoutId) clearTimeout(toastTimeoutId);
+        toastTimeoutId = setTimeout(function () {
+          toastEl.classList.remove('visible');
+        }, 2600);
+      }
+
+      /* ==========================================================================
+         4. SISTEMA DE PLANTILLA SVG COMPARTIDA CON IDs ÚNICOS Y FALLBACK DATA:URI
+         ========================================================================== */
+      function extractAndRemoveHiddenSvgSource() {
+        const holder = document.getElementById('svg-master-template-holder');
+        if (!holder) return;
+        svgMasterTemplateString = holder.innerHTML.trim();
+        holder.remove();
+      }
+
+      function buildUniqueSvgMarkup(instanceSuffix) {
+        return svgMasterTemplateString.replace(/__UID__/g, '_' + instanceSuffix);
+      }
+
+      function mountSvgInstance(containerId, instanceSuffix) {
+        const targetContainer = document.getElementById(containerId);
+        if (!targetContainer || !svgMasterTemplateString) return;
+
+        const uniqueMarkup = buildUniqueSvgMarkup(instanceSuffix);
+        targetContainer.innerHTML = uniqueMarkup;
+
+        const svgElement = targetContainer.querySelector('svg');
+        if (!svgElement) {
+          mountDataUriSvgFallback(targetContainer, uniqueMarkup);
+          return;
+        }
+
+        if (isSvgPaused) {
+          targetContainer.classList.add('svg-paused');
+        } else {
+          targetContainer.classList.remove('svg-paused');
+        }
+      }
+
+      function mountDataUriSvgFallback(targetContainer, svgMarkup) {
+        try {
+          const encodedSvg = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgMarkup);
+          const fallbackImg = document.createElement('img');
+          fallbackImg.src = encodedSvg;
+          fallbackImg.alt = 'Ilustración vectorial del sistema de creación de plugins con IA y consola DSP';
+          fallbackImg.style.width = '100%';
+          fallbackImg.style.height = '100%';
+          targetContainer.innerHTML = '';
+          targetContainer.appendChild(fallbackImg);
+        } catch (fallbackError) {
+          targetContainer.textContent = 'Ilustración técnica: Red neuronal IA conectada al procesador DSP Busy Works Beats Plan B.';
+        }
+      }
+
+      function ensureVisibleSvgsAreMounted() {
+        if (currentTabIndex === 0) {
+          const heroContainer = document.getElementById('svg-hero-container');
+          if (heroContainer && !heroContainer.querySelector('svg') && !heroContainer.querySelector('img')) {
+            mountSvgInstance('svg-hero-container', 'hero');
+          }
+        }
+        if (currentTabIndex === 9) {
+          const creditsContainer = document.getElementById('svg-credits-container');
+          if (creditsContainer && !creditsContainer.querySelector('svg') && !creditsContainer.querySelector('img')) {
+            mountSvgInstance('svg-credits-container', 'credits');
+          }
+        }
+      }
+
+      function toggleSvgAnimationState() {
+        isSvgPaused = !isSvgPaused;
+        const containers = [
+          document.getElementById('svg-hero-container'),
+          document.getElementById('svg-credits-container')
+        ];
+        containers.forEach(function (container) {
+          if (container) {
+            container.classList.toggle('svg-paused', isSvgPaused);
+          }
+        });
+        showToast(isSvgPaused ? '⏸ Animación SVG en pausa' : '▶️ Animación SVG reanudada');
+      }
+
+      /* ==========================================================================
+         5. NAVEGACIÓN SPA E ÍNDICE LATERAL (#dr y #mb) SEGÚN ESPECIFICACIÓN
+         ========================================================================== */
+      const tg = function (forceState) {
+        dr.classList.toggle('o', forceState);
+        mb.setAttribute('aria-expanded', dr.classList.contains('o'));
+      };
+
+      function scrollToTopOfCurrentTab() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      window.go = function (tabIndex) {
+        const validIndex = (tabIndex >= 0 && tabIndex < secs.length) ? tabIndex : 0;
+        currentTabIndex = validIndex;
+
+        secs.forEach(function (section, idx) {
+          section.classList.toggle('active', idx === validIndex);
+        });
+
+        navChips.forEach(function (chip) {
+          const targetIdx = parseInt(chip.getAttribute('data-tab-target'), 10);
+          const isMatch = targetIdx === validIndex;
+          chip.classList.toggle('active', isMatch);
+          if (isMatch) {
+            chip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }
+        });
+
+        Array.from(dr.children).forEach(function (linkItem, idx) {
+          linkItem.classList.toggle('on', idx === validIndex);
+        });
+
+        if (validIndex === 0) {
+          mountSvgInstance('svg-hero-container', 'hero');
+        } else if (validIndex === 9) {
+          mountSvgInstance('svg-credits-container', 'credits');
+        }
+
+        saveToStorage(STORAGE_KEYS.ACTIVE_TAB, validIndex);
+        scrollToTopOfCurrentTab();
+        updateReadingProgress();
+      };
+
+      function buildSidebarIndex() {
+        secs.forEach(function (section, index) {
+          const linkEl = document.createElement('a');
+          const sectionTitle = section.dataset.t || (section.querySelector('h2') ? section.querySelector('h2').textContent : 'Sección');
+          linkEl.textContent = (index ? index + '. ' : '') + sectionTitle;
+          linkEl.setAttribute('tabindex', '0');
+          linkEl.onclick = function () {
+            window.go(index);
+            tg(false);
+          };
+          linkEl.onkeydown = function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              window.go(index);
+              tg(false);
+            }
+          };
+          dr.appendChild(linkEl);
+        });
+
+        mb.onclick = function () {
+          tg();
+        };
+
+        const homeIndexBtn = document.querySelector('#ix');
+        if (homeIndexBtn) {
+          homeIndexBtn.onclick = function () {
+            tg(true);
+          };
+        }
+
+        window.addEventListener('keydown', function (event) {
+          if (event.key === 'Escape') {
+            tg(false);
+          } else if (event.key === 'ArrowRight' && document.activeElement.tagName !== 'INPUT') {
+            if (currentTabIndex < secs.length - 1) window.go(currentTabIndex + 1);
+          } else if (event.key === 'ArrowLeft' && document.activeElement.tagName !== 'INPUT') {
+            if (currentTabIndex > 0) window.go(currentTabIndex - 1);
+          }
+        });
+
+        document.addEventListener('click', function (event) {
+          if (!event.target.closest('#dr,#mb,#ix')) {
+            tg(false);
+          }
+        });
+      }
+
+      /* ==========================================================================
+         6. BOTONES FLOTANTES MOVIBLES (ARRASTRABLES + CLIC FUNCIONAL)
+         ========================================================================== */
+      function makeButtonDraggable(buttonElement, storageKey, onClickCallback) {
+        if (!buttonElement) return;
+
+        const savedPos = loadFromStorage(storageKey, null);
+        if (savedPos && typeof savedPos.left === 'number' && typeof savedPos.top === 'number') {
+          const maxLeft = Math.max(10, window.innerWidth - 110);
+          const maxTop = Math.max(65, window.innerHeight - 55);
+          buttonElement.style.left = Math.min(Math.max(6, savedPos.left), maxLeft) + 'px';
+          buttonElement.style.top = Math.min(Math.max(65, savedPos.top), maxTop) + 'px';
+          buttonElement.style.right = 'auto';
+          buttonElement.style.bottom = 'auto';
+        }
+
+        let isDragging = false;
+        let hasMovedSignificantly = false;
+        let startX = 0;
+        let startY = 0;
+        let initialLeft = 0;
+        let initialTop = 0;
+
+        buttonElement.addEventListener('pointerdown', function (event) {
+          isDragging = true;
+          hasMovedSignificantly = false;
+          startX = event.clientX;
+          startY = event.clientY;
+          const rect = buttonElement.getBoundingClientRect();
+          initialLeft = rect.left;
+          initialTop = rect.top;
+          buttonElement.setPointerCapture(event.pointerId);
+        });
+
+        buttonElement.addEventListener('pointermove', function (event) {
+          if (!isDragging) return;
+          const deltaX = event.clientX - startX;
+          const deltaY = event.clientY - startY;
+
+          if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
+            hasMovedSignificantly = true;
+          }
+
+          if (hasMovedSignificantly) {
+            const btnWidth = buttonElement.offsetWidth;
+            const btnHeight = buttonElement.offsetHeight;
+            const clampedLeft = Math.min(Math.max(4, initialLeft + deltaX), window.innerWidth - btnWidth - 4);
+            const clampedTop = Math.min(Math.max(64, initialTop + deltaY), window.innerHeight - btnHeight - 4);
+
+            buttonElement.style.left = clampedLeft + 'px';
+            buttonElement.style.top = clampedTop + 'px';
+            buttonElement.style.right = 'auto';
+            buttonElement.style.bottom = 'auto';
+          }
+        });
+
+        buttonElement.addEventListener('pointerup', function (event) {
+          if (!isDragging) return;
+          isDragging = false;
+          buttonElement.releasePointerCapture(event.pointerId);
+
+          if (hasMovedSignificantly) {
+            const rect = buttonElement.getBoundingClientRect();
+            saveToStorage(storageKey, { left: rect.left, top: rect.top });
+          } else {
+            onClickCallback();
+          }
+        });
+      }
+
+      /* ==========================================================================
+         7. COPIADO ÍNTEGRO AL PORTAPAPELES CON CONFIRMACIÓN Y ALTERNATIVA
+         ========================================================================== */
+      function copyTextContentById(targetElementId, triggerBtn) {
+        const targetEl = document.getElementById(targetElementId);
+        if (!targetEl) return;
+        const exactText = targetEl.textContent;
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(exactText).then(function () {
+            indicateCopySuccess(triggerBtn);
+          }).catch(function () {
+            executeFallbackCopy(exactText, triggerBtn);
+          });
+        } else {
+          executeFallbackCopy(exactText, triggerBtn);
+        }
+      }
+
+      function executeFallbackCopy(textToCopy, triggerBtn) {
+        try {
+          const tempTextArea = document.createElement('textarea');
+          tempTextArea.value = textToCopy;
+          tempTextArea.style.position = 'fixed';
+          tempTextArea.style.left = '-9999px';
+          document.body.appendChild(tempTextArea);
+          tempTextArea.focus();
+          tempTextArea.select();
+          const copied = document.execCommand('copy');
+          document.body.removeChild(tempTextArea);
+          if (copied) {
+            indicateCopySuccess(triggerBtn);
+          } else {
+            showToast('⚠️ Selecciona el texto manualmente y pulsa Copiar.');
+          }
+        } catch (err) {
+          showToast('⚠️ No se pudo acceder al portapapeles automáticamente.');
+        }
+      }
+
+      function indicateCopySuccess(triggerBtn) {
+        const originalLabel = triggerBtn.innerHTML;
+        triggerBtn.innerHTML = '✅ ¡COPIADO!';
+        showToast('✅ Texto copiado íntegramente al portapapeles');
+        setTimeout(function () {
+          triggerBtn.innerHTML = originalLabel;
+        }, 1800);
+      }
+
+      /* ==========================================================================
+         8. BUSCADOR INTERNO EN TIEMPO REAL
+         ========================================================================== */
+      function setupInternalSearch() {
+        const searchInput = document.getElementById('global-search-input');
+        const clearBtn = document.getElementById('clear-search-btn');
+        if (!searchInput || !clearBtn) return;
+
+        searchInput.addEventListener('input', function () {
+          const query = searchInput.value.trim().toLowerCase();
+          clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+
+          if (!query) return;
+
+          const currentSectionText = secs[currentTabIndex].textContent.toLowerCase();
+          if (currentSectionText.includes(query)) {
+            highlightOrOpenDetailsInSection(secs[currentTabIndex], query);
+            return;
+          }
+
+          for (let i = 0; i < secs.length; i++) {
+            if (secs[i].textContent.toLowerCase().includes(query)) {
+              window.go(i);
+              highlightOrOpenDetailsInSection(secs[i], query);
+              showToast('🔍 Encontrado en pestaña: ' + (secs[i].dataset.t || ''));
+              break;
+            }
+          }
+        });
+
+        clearBtn.addEventListener('click', function () {
+          searchInput.value = '';
+          clearBtn.style.display = 'none';
+          searchInput.focus();
+        });
+      }
+
+      function highlightOrOpenDetailsInSection(sectionEl, query) {
+        const detailsList = sectionEl.querySelectorAll('details.qa-item');
+        detailsList.forEach(function (detailItem) {
+          if (detailItem.textContent.toLowerCase().includes(query)) {
+            detailItem.open = true;
+          }
+        });
+      }
+
+      /* ==========================================================================
+         9. TEMA CLARO/OSCURO, TAMAÑO DE FUENTE, CHECKLIST E IMPRESIÓN A4
+         ========================================================================== */
+      function setupThemeAndTypographyControls() {
+        const savedTheme = loadFromStorage(STORAGE_KEYS.THEME, 'dark');
+        if (savedTheme === 'light') {
+          document.body.classList.add('light-theme');
+        }
+
+        let currentFontScale = parseFloat(loadFromStorage(STORAGE_KEYS.FONT_SCALE, 1));
+        if (isNaN(currentFontScale) || currentFontScale < 0.85 || currentFontScale > 1.35) {
+          currentFontScale = 1;
+        }
+        document.documentElement.style.setProperty('--font-scale', currentFontScale);
+
+        document.getElementById('theme-toggle-btn').addEventListener('click', function () {
+          const isLight = document.body.classList.toggle('light-theme');
+          saveToStorage(STORAGE_KEYS.THEME, isLight ? 'light' : 'dark');
+          showToast(isLight ? '☀️ Tema Claro activado' : '🌙 Tema Oscuro activado');
+        });
+
+        document.getElementById('font-inc-btn').addEventListener('click', function () {
+          currentFontScale = Math.min(1.3, +(currentFontScale + 0.08).toFixed(2));
+          document.documentElement.style.setProperty('--font-scale', currentFontScale);
+          saveToStorage(STORAGE_KEYS.FONT_SCALE, currentFontScale);
+          showToast('🔠 Tamaño de texto: ' + Math.round(currentFontScale * 100) + '%');
+        });
+
+        document.getElementById('font-dec-btn').addEventListener('click', function () {
+          currentFontScale = Math.max(0.85, +(currentFontScale - 0.08).toFixed(2));
+          document.documentElement.style.setProperty('--font-scale', currentFontScale);
+          saveToStorage(STORAGE_KEYS.FONT_SCALE, currentFontScale);
+          showToast('🔡 Tamaño de texto: ' + Math.round(currentFontScale * 100) + '%');
+        });
+      }
+
+      function setupInteractiveChecklist() {
+        const checkboxes = Array.from(document.querySelectorAll('#interactive-checklist input[type="checkbox"]'));
+        const savedState = loadFromStorage(STORAGE_KEYS.CHECKLIST, {});
+
+        checkboxes.forEach(function (checkbox) {
+          const id = checkbox.getAttribute('data-check-id');
+          if (savedState[id]) {
+            checkbox.checked = true;
+            checkbox.closest('.checklist-item').classList.add('completed');
+          }
+          checkbox.addEventListener('change', function () {
+            savedState[id] = checkbox.checked;
+            checkbox.closest('.checklist-item').classList.toggle('completed', checkbox.checked);
+            saveToStorage(STORAGE_KEYS.CHECKLIST, savedState);
+          });
+        });
+
+        const resetBtn = document.getElementById('reset-checklist-btn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', function () {
+            checkboxes.forEach(function (cb) {
+              cb.checked = false;
+              cb.closest('.checklist-item').classList.remove('completed');
+            });
+            saveToStorage(STORAGE_KEYS.CHECKLIST, {});
+            showToast('🔄 Lista de comprobación reiniciada');
+          });
+        }
+      }
+
+      function prepareDocumentBeforePrint() {
+        mountSvgInstance('svg-hero-container', 'hero');
+        mountSvgInstance('svg-credits-container', 'credits');
+
+        closedDetailsBeforePrint = [];
+        document.querySelectorAll('details.qa-item').forEach(function (detailEl) {
+          if (!detailEl.open) {
+            closedDetailsBeforePrint.push(detailEl);
+            detailEl.open = true;
+          }
+        });
+      }
+
+      function restoreDocumentAfterPrint() {
+        closedDetailsBeforePrint.forEach(function (detailEl) {
+          detailEl.open = false;
+        });
+        closedDetailsBeforePrint = [];
+      }
+
+      function setupPrintAndPdfFeature() {
+        window.addEventListener('beforeprint', prepareDocumentBeforePrint);
+        window.addEventListener('afterprint', restoreDocumentAfterPrint);
+
+        const printBtn = document.getElementById('print-pdf-btn');
+        if (printBtn) {
+          printBtn.addEventListener('click', function () {
+            prepareDocumentBeforePrint();
+            try {
+              window.print();
+            } catch (printError) {
+              alert('Abre este archivo directamente en el navegador y utiliza Ctrl+P o Cmd+P');
+            } finally {
+              setTimeout(restoreDocumentAfterPrint, 900);
+            }
+          });
+        }
+      }
+
+      function updateReadingProgress() {
+        const progressBar = document.getElementById('reading-progress-bar');
+        if (!progressBar) return;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const docHeight = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const scrollPercent = Math.min(100, Math.max(0, (scrollTop / docHeight) * 100));
+        const tabProgress = ((currentTabIndex + 1) / secs.length) * 100;
+        const combinedProgress = Math.max(scrollPercent, tabProgress * 0.4);
+        progressBar.style.width = combinedProgress + '%';
+      }
+
+      /* ==========================================================================
+         10. INICIALIZACIÓN GENERAL
+         ========================================================================== */
+      function initApplication() {
+        extractAndRemoveHiddenSvgSource();
+        buildSidebarIndex();
+
+        navChips.forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            const targetIdx = parseInt(chip.getAttribute('data-tab-target'), 10);
+            window.go(targetIdx);
+          });
+        });
+
+        document.querySelectorAll('.copy-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const targetId = btn.getAttribute('data-copy-target');
+            copyTextContentById(targetId, btn);
+          });
+        });
+
+        const expandQaBtn = document.getElementById('expand-all-qa-btn');
+        const collapseQaBtn = document.getElementById('collapse-all-qa-btn');
+        if (expandQaBtn && collapseQaBtn) {
+          expandQaBtn.addEventListener('click', function () {
+            document.querySelectorAll('#sec-qa details.qa-item').forEach(function (d) { d.open = true; });
+          });
+          collapseQaBtn.addEventListener('click', function () {
+            document.querySelectorAll('#sec-qa details.qa-item').forEach(function (d) { d.open = false; });
+          });
+        }
+
+        const heroAnimBtn = document.getElementById('toggle-svg-anim-hero');
+        const creditsAnimBtn = document.getElementById('toggle-svg-anim-credits');
+        if (heroAnimBtn) heroAnimBtn.addEventListener('click', toggleSvgAnimationState);
+        if (creditsAnimBtn) creditsAnimBtn.addEventListener('click', toggleSvgAnimationState);
+
+        makeButtonDraggable(
+          document.getElementById('float-home-btn'),
+          STORAGE_KEYS.FLOAT_HOME_POS,
+          function () {
+            window.go(0);
+            showToast('🏠 Has vuelto a INICIO');
+          }
+        );
+
+        makeButtonDraggable(
+          document.getElementById('float-top-btn'),
+          STORAGE_KEYS.FLOAT_TOP_POS,
+          function () {
+            scrollToTopOfCurrentTab();
+            showToast('⬆️ Comienzo de la pestaña actual');
+          }
+        );
+
+        setupInternalSearch();
+        setupThemeAndTypographyControls();
+        setupInteractiveChecklist();
+        setupPrintAndPdfFeature();
+
+        window.addEventListener('scroll', updateReadingProgress, { passive: true });
+
+        const savedTab = parseInt(loadFromStorage(STORAGE_KEYS.ACTIVE_TAB, 0), 10);
+        window.go(isNaN(savedTab) ? 0 : savedTab);
+
+        setInterval(ensureVisibleSvgsAreMounted, 2500);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initApplication);
+      } else {
+        initApplication();
+      }
+    })();
+  </script>
+</body>
+</html>
